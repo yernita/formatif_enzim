@@ -1,0 +1,2211 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SUPER MARIO: Kuis Biologi Enzim (Kelas XI SMA)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Fredoka (Ramah Anak/Kelas) & Press Start 2P (Retro Mario) -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * {
+            user-select: none !important;
+            -webkit-user-select: none !important;
+            -moz-user-select: none !important;
+            -ms-user-select: none !important;
+            -webkit-touch-callout: none !important;
+            -webkit-tap-highlight-color: transparent !important;
+            box-sizing: border-box;
+        }
+        html, body {
+            font-family: 'Fredoka', sans-serif;
+            width: 100vw;
+            height: 100dvh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            overscroll-behavior: none;
+            background-color: #0f172a;
+            touch-action: manipulation;
+        }
+        .font-pixel {
+            font-family: 'Press Start 2P', cursive;
+        }
+        /* Custom Mario Button Styling */
+        .mario-btn {
+            transition: transform 0.08s ease, box-shadow 0.08s ease;
+            box-shadow: 0 5px 0 rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,255,255,0.45);
+        }
+        .mario-btn:active, .mario-btn.pressed {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3);
+        }
+        /* Question Box Pulse */
+        @keyframes qboxPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.06); }
+        }
+        .qbox-badge {
+            animation: qboxPulse 1.5s infinite ease-in-out;
+        }
+        /* Custom Scrollbar for Question Modal & Report */
+        .custom-scroll {
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y !important;
+        }
+        .custom-scroll * {
+            touch-action: pan-y !important;
+        }
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 8px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #f59e0b;
+            border-radius: 8px;
+        }
+        #canvas-container, canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none !important;
+        }
+    </style>
+</head>
+<body class="w-screen h-[100dvh] relative select-none overflow-hidden bg-sky-400" oncontextmenu="return false;">
+
+    <!-- ==================== GAME CANVAS ==================== -->
+    <div id="canvas-container" class="w-full h-full relative">
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <!-- ==================== TOP HUD BAR (COMPACT MOBILE-FIRST) ==================== -->
+    <div id="hud-bar" class="hidden fixed top-0 left-0 right-0 z-20 p-1.5 sm:p-3 pointer-events-none">
+        <div class="max-w-6xl mx-auto flex flex-col gap-1.5 pointer-events-auto">
+            
+            <!-- Main Top Row -->
+            <div class="flex items-center justify-between gap-1.5 bg-slate-900/90 backdrop-blur-md text-white px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-2xl border-2 border-yellow-400 shadow-lg">
+                
+                <!-- Student Info & Zone -->
+                <div class="flex items-center gap-2 min-w-0">
+                    <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-red-600 border-2 border-white flex items-center justify-center shadow font-pixel text-xs sm:text-sm text-yellow-300 shrink-0">
+                        M
+                    </div>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-1.5">
+                            <span id="hud-name" class="font-bold text-xs sm:text-sm text-yellow-300 truncate max-w-[105px] sm:max-w-[200px]">Siswa</span>
+                            <span id="hud-class" class="text-[10px] sm:text-xs bg-blue-600 px-1.5 py-0.5 rounded-md font-semibold border border-blue-300 shrink-0">XI</span>
+                        </div>
+                        <div id="hud-zone" class="text-[10px] sm:text-xs text-emerald-300 font-medium truncate flex items-center gap-1">
+                            <i class="fa-solid fa-map-location-dot"></i>
+                            <span>Zona 1: Luar Ruangan</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Score, Fullscreen & Audio Controls -->
+                <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+                    <div class="bg-amber-500/20 border border-amber-400 px-2 py-1 rounded-xl flex items-center gap-1.5">
+                        <i class="fa-solid fa-star text-yellow-400 text-xs sm:text-sm"></i>
+                        <div>
+                            <div class="text-[8px] sm:text-[9px] uppercase tracking-wider text-amber-200 leading-none">Skor</div>
+                            <div id="hud-score" class="font-pixel text-[11px] sm:text-sm text-yellow-300">000</div>
+                        </div>
+                    </div>
+
+                    <button id="btn-fullscreen" onclick="toggleFullScreen()" class="mario-btn w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-700 hover:bg-slate-600 text-white border-2 border-slate-400 flex items-center justify-center" title="Layar Penuh HP">
+                        <i id="icon-fullscreen" class="fa-solid fa-expand text-xs sm:text-sm"></i>
+                    </button>
+
+                    <button id="btn-audio" onclick="toggleAudio()" class="mario-btn w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white border-2 border-indigo-300 flex items-center justify-center" title="Suara Musik & Efek">
+                        <i id="icon-audio" class="fa-solid fa-volume-high text-xs sm:text-sm"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 10 Question Boxes Mini Tracker Bar (Visible on Both Mobile & Desktop!) -->
+            <div class="flex items-center justify-between gap-1 bg-slate-900/80 backdrop-blur-sm px-2.5 py-1 rounded-xl border border-slate-600">
+                <span class="text-[10px] sm:text-xs text-amber-300 font-bold whitespace-nowrap flex items-center gap-1">
+                    <i class="fa-solid fa-cube"></i> <span id="hud-mobile-progress">0/10</span> Soal:
+                </span>
+                <div id="hud-boxes" class="flex items-center justify-end gap-1 overflow-x-auto py-0.5">
+                    <!-- Dynamically populated 1-10 badges -->
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Alert Banner when a box is missed -->
+        <div id="missed-box-banner" class="hidden max-w-xl mx-auto mt-1.5 bg-rose-600/95 text-white px-3 py-1.5 rounded-xl border-2 border-yellow-300 shadow-lg flex items-center justify-between gap-2 pointer-events-auto animate-bounce">
+            <div class="text-[11px] sm:text-xs font-bold flex items-center gap-1.5">
+                <i class="fa-solid fa-triangle-exclamation text-yellow-300"></i>
+                <span id="missed-box-text">Ada Kotak Soal terlewat di belakang!</span>
+            </div>
+            <button onclick="setDirection(-1)" class="bg-yellow-400 active:bg-yellow-300 text-slate-900 font-extrabold text-[11px] px-2.5 py-1 rounded-lg shadow whitespace-nowrap">
+                🔄 Balik Kiri
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== BOTTOM ONE-HANDED THUMB CONTROLS (MOBILE-FIRST) ==================== -->
+    <div id="controls-bar" class="hidden fixed bottom-0 left-0 right-0 z-20 p-2.5 sm:p-4 pb-3 sm:pb-5 pointer-events-none">
+        <div class="max-w-md sm:max-w-4xl mx-auto flex flex-col gap-1.5">
+            
+            <!-- Jump Charge Indicator Bar -->
+            <div class="w-full flex items-center justify-between gap-2 bg-slate-900/85 backdrop-blur-md px-3 py-1 rounded-full border border-white/30 shadow">
+                <span class="text-[10px] sm:text-xs font-bold text-yellow-300 whitespace-nowrap flex items-center gap-1">
+                    <i class="fa-solid fa-bolt"></i> Tenaga Lompat:
+                </span>
+                <div class="flex-1 h-2.5 bg-slate-800 rounded-full overflow-hidden border border-slate-600 p-0.5">
+                    <div id="jump-charge-bar" class="h-full w-0 bg-gradient-to-r from-lime-400 via-yellow-400 to-red-500 rounded-full transition-none"></div>
+                </div>
+                <span id="dir-status-badge" class="text-[10px] sm:text-xs font-extrabold text-emerald-300 whitespace-nowrap">
+                    Lari: KANAN ➡️
+                </span>
+            </div>
+
+            <!-- Ergonomic One-Handed Thumb Pad Row -->
+            <div class="grid grid-cols-12 gap-2 sm:gap-3 pointer-events-auto items-stretch">
+                
+                <!-- Single-Tap Direction Toggle Button (4 cols on mobile) -->
+                <button id="btn-toggle-dir" onclick="toggleDirection()" class="col-span-5 sm:col-span-4 mario-btn py-3.5 sm:py-4 px-2 rounded-2xl bg-amber-500 active:bg-amber-400 text-slate-900 font-extrabold text-xs sm:text-sm border-2 border-white flex flex-col items-center justify-center gap-0.5 shadow-xl">
+                    <div class="flex items-center gap-1 text-sm sm:text-base">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                        <span id="btn-dir-label">BALIK KIRI</span>
+                    </div>
+                    <span class="text-[9px] sm:text-[10px] font-semibold opacity-85 leading-tight">Ketuk 1x Ganti Arah</span>
+                </button>
+
+                <!-- Giant One-Handed Hold-to-Jump Button (8 cols on mobile) -->
+                <button id="btn-jump" class="col-span-7 sm:col-span-8 mario-btn py-3.5 sm:py-4 px-3 rounded-2xl bg-gradient-to-b from-red-500 to-red-700 active:from-red-600 active:to-red-800 text-white border-2 border-yellow-300 flex flex-col items-center justify-center gap-0.5 shadow-2xl">
+                    <div class="flex items-center gap-2 font-pixel text-xs sm:text-sm text-yellow-300">
+                        <i class="fa-solid fa-rocket text-white text-sm sm:text-base"></i>
+                        <span>TAHAN = LOMPAT</span>
+                    </div>
+                    <span class="text-[10px] sm:text-xs font-semibold text-red-100 leading-tight">Makin Lama Ditahan, Makin Tinggi!</span>
+                </button>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 1. LOGIN & IDENTITY MODAL ==================== -->
+    <div id="login-modal" class="fixed inset-0 z-30 flex items-center justify-center p-2.5 sm:p-4 bg-gradient-to-b from-sky-500/85 via-indigo-900/85 to-slate-950/95 backdrop-blur-sm overflow-y-auto">
+        <div class="w-full max-w-xl bg-white rounded-3xl border-4 border-yellow-400 shadow-2xl overflow-hidden my-auto max-h-[94dvh] flex flex-col">
+            
+            <!-- Header Banner -->
+            <div class="bg-gradient-to-r from-red-600 via-red-500 to-amber-500 p-3.5 sm:p-5 text-white relative overflow-hidden border-b-4 border-yellow-400 shrink-0">
+                <div class="relative z-10 flex items-center justify-between gap-3">
+                    <div>
+                        <span class="inline-block bg-yellow-400 text-slate-900 font-bold text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full mb-1.5 shadow">
+                            <i class="fa-solid fa-mobile-screen-button mr-1"></i> EDISI MOBILE HP - BIOLOGI KELAS XI
+                        </span>
+                        <h1 class="font-pixel text-base sm:text-xl text-white drop-shadow-[0_3px_0_rgba(0,0,0,0.5)] leading-snug">
+                            SUPER MARIO BROS
+                        </h1>
+                        <p class="text-yellow-100 font-semibold text-xs sm:text-sm mt-0.5">
+                            Kuis Interaktif Enzim & Metabolisme (10 Soal)
+                        </p>
+                    </div>
+                    <!-- Decorative Question Block Icon -->
+                    <div class="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-amber-400 border-4 border-slate-900 shadow-lg flex items-center justify-center shrink-0 qbox-badge">
+                        <span class="font-pixel text-2xl sm:text-3xl text-slate-900">?</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Body Content -->
+            <div class="p-3.5 sm:p-5 space-y-3 overflow-y-auto custom-scroll flex-1">
+                
+                <!-- Identity Inputs -->
+                <div class="bg-sky-50 p-3 sm:p-4 rounded-2xl border-2 border-sky-200 space-y-2.5">
+                    <h2 class="font-bold text-slate-800 text-xs sm:text-sm flex items-center gap-1.5">
+                        <i class="fa-solid fa-id-card text-sky-600"></i>
+                        <span>Identitas Murid (Kelas XI SMA)</span>
+                    </h2>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        <div class="sm:col-span-2">
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Nama Lengkap Murid <span class="text-red-500">*</span></label>
+                            <input id="input-name" type="text" placeholder="Ketik nama lengkapmu..." class="w-full px-3 py-2.5 rounded-xl border-2 border-slate-300 focus:border-red-500 focus:outline-none font-semibold text-slate-800 text-sm" style="user-select: text !important; -webkit-user-select: text !important; touch-action: auto !important;">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Nomor Absen <span class="text-red-500">*</span></label>
+                            <input id="input-absen" type="number" inputmode="numeric" min="1" max="60" placeholder="Contoh: 12" class="w-full px-3 py-2.5 rounded-xl border-2 border-slate-300 focus:border-red-500 focus:outline-none font-semibold text-slate-800 text-sm" style="user-select: text !important; -webkit-user-select: text !important; touch-action: auto !important;">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1">Kelas (Khusus Kelas XI - 1 Rombel) <span class="text-red-500">*</span></label>
+                        <select id="input-class" class="w-full px-3 py-2.5 rounded-xl border-2 border-slate-300 focus:border-red-500 focus:outline-none font-semibold text-slate-800 text-sm bg-white" style="touch-action: auto !important;">
+                            <option value="Kelas XI" selected>Kelas XI</option>
+                        </select>
+                    </div>
+
+                    <div id="login-error" class="hidden bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        <span id="login-error-text">Lengkapi Nama, Nomor Absen, dan Kelas XI terlebih dahulu!</span>
+                    </div>
+                </div>
+
+                <!-- Rules & How to Play on HP Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div class="bg-amber-50 p-3 rounded-2xl border-2 border-amber-200 text-[11px] sm:text-xs space-y-1 text-slate-700">
+                        <div class="font-bold text-amber-900 text-xs sm:text-sm flex items-center gap-1.5">
+                            <i class="fa-solid fa-hand-pointer text-amber-600"></i> Cara Main 1 Tangan di HP
+                        </div>
+                        <p>• <b>Mario berlari otomatis!</b></p>
+                        <p>• <b>Tahan layar HP / tombol merah</b> dengan jempol untuk melompat. Makin lama ditahan, makin tinggi!</p>
+                        <p>• Terlewat kotak soal <b>[?]</b>? Ketuk tombol <b>"🔄 BALIK KIRI"</b> 1x agar Mario berbalik arah!</p>
+                    </div>
+
+                    <div class="bg-rose-50 p-3 rounded-2xl border-2 border-rose-200 text-[11px] sm:text-xs space-y-1 text-slate-700">
+                        <div class="font-bold text-rose-900 text-xs sm:text-sm flex items-center gap-1.5">
+                            <i class="fa-solid fa-shield-halved text-rose-600"></i> Aturan & Keamanan HP
+                        </div>
+                        <p>• <b>10 Kotak Soal</b> | Waktu <b>40 detik/soal</b> | <b>1x kesempatan</b> jawab (Benar +10, Salah 0).</p>
+                        <p class="text-rose-700 font-bold">• DILARANG keluar browser HP / buka aplikasi lain! Jika pindah tab/aplikasi, skor otomatis 0 & ulang dari awal!</p>
+                    </div>
+                </div>
+
+                <!-- Start Button -->
+                <button onclick="startGame()" class="mario-btn w-full py-3.5 sm:py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-600 active:from-emerald-600 active:to-green-700 text-white font-pixel text-xs sm:text-sm border-2 border-yellow-300 flex items-center justify-center gap-2 shadow-xl">
+                    <i class="fa-solid fa-play"></i>
+                    <span>MULAI MAIN DI HP SEKARANG!</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 2. QUESTION MODAL (MOBILE-FRIENDLY QUIZ SHEET) ==================== -->
+    <div id="question-modal" class="hidden fixed inset-0 z-40 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/85 backdrop-blur-md">
+        <div class="w-full max-w-2xl bg-white rounded-t-3xl sm:rounded-3xl border-t-4 sm:border-4 border-amber-400 shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90dvh]">
+            
+            <!-- Modal Header with Timer -->
+            <div class="bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-500 px-3.5 py-2.5 sm:p-4 text-slate-900 border-b-4 border-slate-900 flex items-center justify-between gap-2 shrink-0">
+                <div class="flex items-center gap-2 min-w-0">
+                    <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-900 text-yellow-400 font-pixel text-xs sm:text-sm flex items-center justify-center border-2 border-white shadow shrink-0">
+                        <span id="q-number-badge">?1</span>
+                    </div>
+                    <div class="min-w-0">
+                        <span id="q-topic-badge" class="text-[10px] font-extrabold uppercase tracking-wider bg-white/85 px-2 py-0.5 rounded-md text-slate-800 inline-block truncate max-w-full">Struktur Enzim</span>
+                        <h3 id="q-title" class="font-extrabold text-xs sm:text-base text-slate-900 truncate">Kotak Soal Biologi #1</h3>
+                    </div>
+                </div>
+
+                <!-- 40s Countdown Display -->
+                <div class="flex items-center gap-1.5 bg-slate-900 text-white px-2.5 py-1.5 rounded-2xl border-2 border-white shadow shrink-0">
+                    <i class="fa-solid fa-stopwatch text-yellow-400 animate-pulse text-sm sm:text-base"></i>
+                    <div class="text-right">
+                        <div class="text-[8px] uppercase text-slate-300 leading-none">Waktu</div>
+                        <div id="q-timer-text" class="font-pixel text-xs sm:text-sm text-yellow-300">40d</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timer Progress Bar -->
+            <div class="w-full h-2 bg-slate-200 shrink-0">
+                <div id="q-timer-bar" class="h-full bg-emerald-500 transition-all duration-300" style="width: 100%;"></div>
+            </div>
+
+            <!-- Scrollable Question Content & Touch-Friendly Options -->
+            <div id="q-scroll-body" class="p-3.5 sm:p-5 overflow-y-auto custom-scroll space-y-3 flex-1">
+                
+                <!-- Stimulus / Table / SVG Chart Container -->
+                <div id="q-stimulus" class="hidden bg-slate-50 rounded-2xl p-2.5 sm:p-3.5 border-2 border-slate-200 text-xs sm:text-sm text-slate-700 overflow-x-auto">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <!-- Question Text -->
+                <div id="q-text" class="text-slate-900 font-bold text-xs sm:text-base leading-relaxed bg-amber-50/90 p-3 sm:p-3.5 rounded-2xl border-2 border-amber-200">
+                    Pertanyaan akan tampil di sini...
+                </div>
+
+                <!-- 5 Fat-Finger Friendly Options (A - E) -->
+                <div id="q-options" class="grid grid-cols-1 gap-2">
+                    <!-- Buttons A, B, C, D, E populated dynamically -->
+                </div>
+
+                <!-- Feedback Box (Appears immediately after 1 click or timeout) -->
+                <div id="q-feedback" class="hidden rounded-2xl p-3.5 sm:p-4 border-2 space-y-2.5">
+                    <div id="q-feedback-title" class="font-extrabold text-sm sm:text-base flex items-center gap-2"></div>
+                    <p id="q-feedback-desc" class="text-xs sm:text-sm leading-relaxed"></p>
+                    <div class="pt-1">
+                        <button onclick="closeQuestionAndResume()" class="mario-btn w-full py-3.5 rounded-xl bg-emerald-600 active:bg-emerald-700 text-white font-extrabold text-sm sm:text-base border-2 border-yellow-300 flex items-center justify-center gap-2 shadow-lg">
+                            <span>LANJUTKAN PERJALANAN MARIO</span>
+                            <i class="fa-solid fa-circle-arrow-right text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 3. ANTI-CHEAT SECURITY ALERT MODAL ==================== -->
+    <div id="security-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-red-950/95 backdrop-blur-md">
+        <div class="w-full max-w-md bg-white rounded-3xl border-4 border-red-600 shadow-2xl overflow-hidden text-center p-6 space-y-4 animate-bounce" style="animation-iteration-count: 2;">
+            <div class="w-20 h-20 mx-auto rounded-full bg-red-100 border-4 border-red-600 flex items-center justify-center text-red-600 text-4xl shadow-inner">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div class="inline-block bg-red-600 text-white font-pixel text-xs px-3 py-1 rounded-full">
+                SECURITY ALERT!
+            </div>
+            <h2 class="text-xl font-extrabold text-slate-900">
+                Terdeteksi Keluar dari Halaman Ujian!
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                Sistem keamanan mendeteksi kamu <b>membuka tab lain, meminimalkan browser, atau berpindah jendela aplikasi</b>. Sesuai peraturan ujian:
+            </p>
+            <div class="bg-red-50 border-2 border-red-300 rounded-2xl p-3 text-xs sm:text-sm font-bold text-red-800 space-y-1">
+                <div>❌ Skor Otomatis Di-reset Menjadi 0</div>
+                <div>🔄 Seluruh Kotak Soal (1 - 10) Diulang dari Awal</div>
+            </div>
+            <button onclick="acknowledgeSecurityReset()" class="mario-btn w-full py-3.5 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm border-2 border-yellow-300 shadow-lg">
+                Saya Mengerti & Ulangi dari Soal 1
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== 4. FINAL VICTORY / REPORT MODAL ==================== -->
+    <div id="victory-modal" class="hidden fixed inset-0 z-40 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto">
+        <div class="w-full max-w-3xl bg-white rounded-3xl border-4 border-yellow-400 shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col">
+            
+            <!-- Victory Header -->
+            <div class="bg-gradient-to-r from-emerald-600 via-teal-600 to-sky-600 p-5 text-white text-center relative border-b-4 border-yellow-400">
+                <div class="inline-block bg-yellow-400 text-slate-900 font-pixel text-xs px-3 py-1 rounded-full mb-2 shadow">
+                    STAGE CLEAR! 🚩
+                </div>
+                <h2 class="font-pixel text-lg sm:text-2xl text-white drop-shadow">
+                    SELAMAT! MISI SELESAI
+                </h2>
+                <p class="text-emerald-100 text-xs sm:text-sm font-medium mt-1">
+                    Laporan Hasil Kuis Biologi Enzim - Kelas XI SMA
+                </p>
+            </div>
+
+            <!-- Victory Body -->
+            <div class="p-4 sm:p-6 overflow-y-auto custom-scroll space-y-4 flex-1">
+                
+                <!-- Student & Score Summary Card -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 items-center">
+                    <div class="sm:col-span-2 space-y-1 text-xs sm:text-sm">
+                        <div class="text-slate-500 font-semibold">Identitas Siswa:</div>
+                        <div id="rep-name" class="text-base sm:text-lg font-extrabold text-slate-800">-</div>
+                        <div class="flex flex-wrap gap-2 pt-1">
+                            <span id="rep-absen" class="bg-sky-100 text-sky-800 font-bold px-2.5 py-1 rounded-lg border border-sky-300">No. Absen: -</span>
+                            <span id="rep-class" class="bg-indigo-100 text-indigo-800 font-bold px-2.5 py-1 rounded-lg border border-indigo-300">Kelas: -</span>
+                            <span id="rep-violations" class="bg-emerald-100 text-emerald-800 font-bold px-2.5 py-1 rounded-lg border border-emerald-300">Pelanggaran Tab: 0x</span>
+                        </div>
+                    </div>
+                    <div class="bg-gradient-to-br from-amber-400 to-orange-500 text-slate-900 p-4 rounded-2xl border-2 border-slate-900 text-center shadow-lg">
+                        <div class="text-xs font-extrabold uppercase tracking-wider">Nilai Akhir</div>
+                        <div id="rep-score" class="font-pixel text-3xl sm:text-4xl my-1 text-white drop-shadow-[0_2px_0_rgba(0,0,0,0.6)]">100</div>
+                        <div id="rep-correct" class="text-xs font-bold bg-white/90 px-2 py-0.5 rounded-full inline-block">Benar: 10 / 10</div>
+                    </div>
+                </div>
+
+                <!-- Detailed Answer Breakdown -->
+                <div>
+                    <h3 class="font-bold text-slate-700 text-sm mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-clipboard-check text-emerald-600"></i>
+                        <span>Rincian Jawaban Siswa (10 Soal Enzim):</span>
+                    </h3>
+                    <div id="rep-list" class="space-y-2">
+                        <!-- Dynamically populated -->
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="p-4 bg-slate-100 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                <div class="text-xs text-slate-500 font-medium">
+                    <i class="fa-solid fa-camera mr-1"></i> Silakan tangkap layar (screenshot) halaman ini sebagai bukti nilai kepada Guru.
+                </div>
+                <button onclick="playAgain()" class="mario-btn px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm border-2 border-blue-300 flex items-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span>Main Lagi</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+    <script>
+        /**************************************************************
+         * 1. ANTI-COPY PASTE & SECURITY EVENT LISTENERS
+         **************************************************************/
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('copy', e => e.preventDefault());
+        document.addEventListener('cut', e => e.preventDefault());
+        document.addEventListener('paste', e => e.preventDefault());
+        document.addEventListener('keydown', e => {
+            // Block Ctrl+C, Ctrl+V, Ctrl+U, Ctrl+S, Ctrl+P, F12
+            if (
+                (e.ctrlKey && ['c', 'v', 'u', 's', 'p', 'a'].includes(e.key.toLowerCase())) ||
+                e.key === 'F12'
+            ) {
+                if (document.activeElement.tagName !== 'INPUT') {
+                    e.preventDefault();
+                }
+            }
+        });
+
+        /**************************************************************
+         * 2. SYNTHESIZED CHIPTUNE AUDIO (WEB AUDIO API)
+         **************************************************************/
+        let audioCtx = null;
+        let isMuted = false;
+        let bgmInterval = null;
+        let bgmStep = 0;
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function toggleAudio() {
+            initAudio();
+            isMuted = !isMuted;
+            const icon = document.getElementById('icon-audio');
+            if (isMuted) {
+                icon.className = 'fa-solid fa-volume-xmark text-sm sm:text-base text-red-300';
+            } else {
+                icon.className = 'fa-solid fa-volume-high text-sm sm:text-base';
+            }
+        }
+
+        function playTone(freq, type, duration, vol = 0.12, slideFreq = null) {
+            if (isMuted || !audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                if (slideFreq) {
+                    osc.frequency.exponentialRampToValueAtTime(slideFreq, audioCtx.currentTime + duration);
+                }
+                gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) {}
+        }
+
+        function sfxJump() {
+            playTone(180, 'square', 0.28, 0.1, 620);
+        }
+
+        function sfxCoinBox() {
+            playTone(987.77, 'square', 0.08, 0.12); // B5
+            setTimeout(() => playTone(1318.51, 'square', 0.25, 0.12), 80); // E6
+        }
+
+        function sfxBump() {
+            playTone(130, 'sawtooth', 0.18, 0.14, 65);
+        }
+
+        function sfxCorrect() {
+            const notes = [523.25, 659.25, 783.99, 1046.50]; // C5 E5 G5 C6
+            notes.forEach((n, i) => {
+                setTimeout(() => playTone(n, 'square', 0.14, 0.12), i * 90);
+            });
+        }
+
+        function sfxWrong() {
+            playTone(220, 'sawtooth', 0.2, 0.14);
+            setTimeout(() => playTone(165, 'sawtooth', 0.35, 0.14), 180);
+        }
+
+        function sfxSiren() {
+            playTone(600, 'sawtooth', 0.25, 0.18, 300);
+            setTimeout(() => playTone(600, 'sawtooth', 0.25, 0.18, 300), 280);
+        }
+
+        function sfxVictory() {
+            const fanfare = [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5];
+            const times = [0, 120, 240, 360, 520, 660];
+            fanfare.forEach((f, idx) => {
+                setTimeout(() => playTone(f, 'square', idx === 5 ? 0.45 : 0.12, 0.14), times[idx]);
+            });
+        }
+
+        // Dynamic Chiptune Background Music Loop adapting to Zone 1-4
+        const zoneMelodies = [
+            // Zone 1: Overworld cheerful
+            [330, 330, 0, 330, 0, 262, 330, 0, 392, 0, 0, 0, 196, 0, 0, 0],
+            // Zone 2: Underground bassline
+            [262, 523, 220, 440, 233, 466, 0, 0, 262, 523, 220, 440, 233, 466, 0, 0],
+            // Zone 3: Underwater waltz
+            [262, 330, 392, 523, 392, 330, 294, 349, 440, 294, 349, 440, 330, 392, 494, 392],
+            // Zone 4: Bowser's Castle tense
+            [220, 233, 220, 196, 220, 233, 220, 196, 262, 247, 262, 233, 220, 0, 196, 0]
+        ];
+
+        function startBGM() {
+            if (bgmInterval) clearInterval(bgmInterval);
+            bgmInterval = setInterval(() => {
+                if (!gameState.running || gameState.pausedForModal || isMuted) return;
+                const zoneIdx = getCurrentZoneIndex();
+                const melody = zoneMelodies[zoneIdx];
+                const note = melody[bgmStep % melody.length];
+                if (note > 0) {
+                    playTone(note, zoneIdx === 2 ? 'sine' : 'triangle', 0.13, 0.05);
+                }
+                bgmStep++;
+            }, 190);
+        }
+
+        /**************************************************************
+         * 3. 10 QUESTIONS DATA (ADAPTED DIRECTLY FROM SOAL ENZIM.PDF)
+         **************************************************************/
+        const questionsData = [
+            {
+                id: 1,
+                topic: "Struktur Enzim (Katalase)",
+                title: "Kotak Soal #1: Komponen Enzim Katalase",
+                stimulus: `
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center shrink-0 text-amber-700 font-bold">🐟</div>
+                        <div>
+                            <b>Wacana:</b> Katalase adalah enzim yang terdapat melimpah pada hati ikan cakalang segar yang ditangkap nelayan di Teluk Tomini. Enzim ini tersusun atas <b>bagian protein (apoenzim)</b> yang berikatan sangat kuat dengan <b>gugus heme yang mengandung ion besi (Fe²⁺)</b>. Keduanya diperlukan agar katalase aktif menguraikan H₂O₂ menjadi air (H₂O) dan oksigen (O₂).
+                        </div>
+                    </div>
+                `,
+                question: "Dalam istilah struktur enzim, gabungan antara bagian protein dan gugus prostetik (heme-Fe²⁺) yang membentuk enzim katalase aktif secara utuh disebut ....",
+                options: [
+                    "Apoenzim",
+                    "Koenzim",
+                    "Gugus prostetik",
+                    "Holoenzim",
+                    "Substrat"
+                ],
+                correct: 3, // D
+                explanation: "Enzim lengkap dan aktif yang tersusun atas bagian protein (apoenzim) dan bagian non-protein (kofaktor/gugus prostetik) disebut Holoenzim."
+            },
+            {
+                id: 2,
+                topic: "Sifat Kerja Enzim",
+                title: "Kotak Soal #2: Uji Enzim Pencernaan",
+                stimulus: `
+                    <div class="font-bold text-slate-700 mb-1.5">Tabel Hasil Pengamatan Kerja Dua Enzim Pencernaan:</div>
+                    <table class="w-full text-left border-collapse border border-slate-300 text-xs">
+                        <thead>
+                            <tr class="bg-sky-100 text-sky-900">
+                                <th class="border border-slate-300 p-1.5">No</th>
+                                <th class="border border-slate-300 p-1.5">Enzim</th>
+                                <th class="border border-slate-300 p-1.5">Substrat</th>
+                                <th class="border border-slate-300 p-1.5">Hasil Pengamatan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="border p-1.5">1</td><td class="border p-1.5 font-semibold">Amilase</td><td class="border p-1.5">Amilum</td><td class="border p-1.5 text-emerald-700 font-bold">✓ Maltosa terbentuk</td></tr>
+                            <tr class="bg-slate-100"><td class="border p-1.5">2</td><td class="border p-1.5 font-semibold">Amilase</td><td class="border p-1.5">Protein</td><td class="border p-1.5 text-rose-600">✗ Tidak ada produk</td></tr>
+                            <tr><td class="border p-1.5">3</td><td class="border p-1.5 font-semibold">Pepsin</td><td class="border p-1.5">Protein</td><td class="border p-1.5 text-emerald-700 font-bold">✓ Peptida terbentuk</td></tr>
+                            <tr class="bg-slate-100"><td class="border p-1.5">4</td><td class="border p-1.5 font-semibold">Pepsin</td><td class="border p-1.5">Amilum</td><td class="border p-1.5 text-rose-600">✗ Tidak ada produk</td></tr>
+                        </tbody>
+                    </table>
+                `,
+                question: "Berdasarkan data tabel percobaan tersebut, terbukti bahwa enzim memiliki sifat ....",
+                options: [
+                    "Bekerja secara bolak-balik pada semua reaksi",
+                    "Spesifik terhadap substrat tertentu",
+                    "Ikut habis dalam reaksi yang dikatalisisnya",
+                    "Dapat bekerja pada semua jenis molekul",
+                    "Hanya bekerja pada suhu rendah"
+                ],
+                correct: 1, // B
+                explanation: "Amilase hanya bekerja pada substrat amilum dan pepsin hanya bekerja pada protein. Ini membuktikan enzim bersifat spesifik terhadap substrat tertentu."
+            },
+            {
+                id: 3,
+                topic: "Mekanisme Kerja Enzim",
+                title: "Kotak Soal #3: Tahapan Kerja Enzim",
+                stimulus: `
+                    <div class="space-y-1 text-xs">
+                        <div class="font-bold text-slate-800 mb-1">Berikut tahapan kerja enzim secara acak:</div>
+                        <div class="bg-white p-1.5 rounded border">(1) Terbentuk kompleks enzim-substrat</div>
+                        <div class="bg-white p-1.5 rounded border">(2) Substrat mendekati sisi aktif enzim</div>
+                        <div class="bg-white p-1.5 rounded border">(3) Produk lepas dari sisi aktif enzim</div>
+                        <div class="bg-white p-1.5 rounded border">(4) Substrat diubah menjadi produk</div>
+                        <div class="bg-white p-1.5 rounded border">(5) Enzim kembali ke bentuk semula dan siap digunakan lagi</div>
+                    </div>
+                `,
+                question: "Urutan tahapan kerja enzim yang benar ditunjukkan oleh nomor ....",
+                options: [
+                    "(1) – (2) – (3) – (4) – (5)",
+                    "(2) – (1) – (4) – (3) – (5)",
+                    "(2) – (4) – (1) – (3) – (5)",
+                    "(2) – (1) – (3) – (4) – (5)",
+                    "(4) – (2) – (1) – (3) – (5)"
+                ],
+                correct: 1, // B
+                explanation: "Urutan kerja enzim: Substrat mendekati sisi aktif (2) → Kompleks enzim-substrat (1) → Diubah menjadi produk (4) → Produk lepas (3) → Enzim kembali ke bentuk semula (5)."
+            },
+            {
+                id: 4,
+                topic: "Faktor Suhu terhadap Enzim",
+                title: "Kotak Soal #4: Grafik Pengaruh Suhu",
+                stimulus: `
+                    <div class="space-y-2">
+                        <div class="font-bold text-xs text-slate-700">Tabel & Grafik Pengaruh Suhu terhadap Aktivitas Enzim X:</div>
+                        <table class="w-full text-center border-collapse border border-slate-300 text-[11px]">
+                            <tr class="bg-indigo-100 font-bold">
+                                <td class="border p-1">Suhu (°C)</td><td class="border p-1">10</td><td class="border p-1">20</td><td class="border p-1">30</td><td class="border p-1 bg-emerald-200">40</td><td class="border p-1">50</td><td class="border p-1">60</td>
+                            </tr>
+                            <tr>
+                                <td class="border p-1 font-semibold">Aktivitas (µmol/mnt)</td><td class="border p-1">2</td><td class="border p-1">5</td><td class="border p-1">9</td><td class="border p-1 font-bold text-emerald-700 bg-emerald-50">12</td><td class="border p-1">4</td><td class="border p-1 text-rose-600 font-bold">0</td>
+                            </tr>
+                        </table>
+                        <div class="bg-white p-2 rounded-xl border">
+                            <svg viewBox="0 0 240 85" class="w-full h-20 mx-auto">
+                                <line x1="25" y1="70" x2="225" y2="70" stroke="#64748b" stroke-width="1.5"/>
+                                <line x1="25" y1="10" x2="25" y2="70" stroke="#64748b" stroke-width="1.5"/>
+                                <polyline fill="none" stroke="#0284c7" stroke-width="2.5" points="35,60 70,46 105,28 145,14 185,51 215,70"/>
+                                <circle cx="35" cy="60" r="3" fill="#0284c7"/><text x="35" y="54" font-size="8" text-anchor="middle">2</text><text x="35" y="80" font-size="8" text-anchor="middle">10°</text>
+                                <circle cx="70" cy="46" r="3" fill="#0284c7"/><text x="70" y="40" font-size="8" text-anchor="middle">5</text><text x="70" y="80" font-size="8" text-anchor="middle">20°</text>
+                                <circle cx="105" cy="28" r="3" fill="#0284c7"/><text x="105" y="22" font-size="8" text-anchor="middle">9</text><text x="105" y="80" font-size="8" text-anchor="middle">30°</text>
+                                <circle cx="145" cy="14" r="4" fill="#16a34a"/><text x="145" y="9" font-size="9" font-weight="bold" fill="#16a34a" text-anchor="middle">12 (Opt)</text><text x="145" y="80" font-size="8" font-weight="bold" text-anchor="middle">40°C</text>
+                                <circle cx="185" cy="51" r="3" fill="#e11d48"/><text x="185" y="45" font-size="8" text-anchor="middle">4</text><text x="185" y="80" font-size="8" text-anchor="middle">50°</text>
+                                <circle cx="215" cy="70" r="3" fill="#e11d48"/><text x="215" y="64" font-size="8" text-anchor="middle">0</text><text x="215" y="80" font-size="8" text-anchor="middle">60°</text>
+                            </svg>
+                        </div>
+                    </div>
+                `,
+                question: "Pernyataan yang paling tepat berdasarkan data tabel dan grafik tersebut adalah ....",
+                options: [
+                    "Aktivitas enzim terus meningkat seiring naiknya suhu sehingga suhu optimum berada di atas 60°C",
+                    "Aktivitas tertinggi (12 µmol/menit) terjadi pada 40°C dan penurunan pada 50°C disebabkan perubahan bentuk sisi aktif akibat denaturasi",
+                    "Aktivitas pada suhu 40°C sebesar 3 kali lipat aktivitas pada suhu 20°C",
+                    "Pada suhu 60°C aktivitas enzim nol karena substrat telah habis lebih dahulu",
+                    "Pada suhu 10°C enzim telah terdenaturasi permanen sehingga aktivitasnya rendah"
+                ],
+                correct: 1, // B
+                explanation: "Suhu optimum enzim X adalah 40°C (12 µmol/menit). Saat suhu naik ke 50°C dan 60°C, protein enzim mengalami kerusakan (denaturasi) sehingga sisi aktif berubah bentuk."
+            },
+            {
+                id: 5,
+                topic: "Faktor pH terhadap Enzim Pepsin",
+                title: "Kotak Soal #5: Pengaruh pH Lambung",
+                stimulus: `
+                    <div class="space-y-2">
+                        <p class="text-xs"><b>Kasus:</b> Seseorang meminum antasida berlebihan sehingga pH lambungnya naik dari <b>pH 2 menjadi pH 6</b>.</p>
+                        <table class="w-full text-center border-collapse border border-slate-300 text-[11px]">
+                            <tr class="bg-rose-100 font-bold">
+                                <td class="border p-1">pH</td><td class="border p-1">1</td><td class="border p-1 bg-emerald-200">2 (Opt)</td><td class="border p-1">3</td><td class="border p-1">4</td><td class="border p-1 bg-rose-200">6</td>
+                            </tr>
+                            <tr>
+                                <td class="border p-1 font-semibold">Aktivitas Pepsin (%)</td><td class="border p-1">60%</td><td class="border p-1 font-bold text-emerald-800">100%</td><td class="border p-1">70%</td><td class="border p-1">30%</td><td class="border p-1 font-bold text-rose-700">2%</td>
+                            </tr>
+                        </table>
+                        <div class="bg-white p-2 rounded-xl border">
+                            <svg viewBox="0 0 240 80" class="w-full h-16 mx-auto">
+                                <line x1="25" y1="65" x2="220" y2="65" stroke="#64748b" stroke-width="1.5"/>
+                                <line x1="25" y1="10" x2="25" y2="65" stroke="#64748b" stroke-width="1.5"/>
+                                <polyline fill="none" stroke="#e11d48" stroke-width="2.5" points="40,34 80,12 125,28 165,49 210,63"/>
+                                <circle cx="40" cy="34" r="3" fill="#e11d48"/><text x="40" y="28" font-size="8" text-anchor="middle">60%</text><text x="40" y="75" font-size="8" text-anchor="middle">pH 1</text>
+                                <circle cx="80" cy="12" r="4" fill="#16a34a"/><text x="80" y="8" font-size="8" font-weight="bold" fill="#16a34a" text-anchor="middle">100%</text><text x="80" y="75" font-size="8" font-weight="bold" text-anchor="middle">pH 2</text>
+                                <circle cx="125" cy="28" r="3" fill="#e11d48"/><text x="125" y="22" font-size="8" text-anchor="middle">70%</text><text x="125" y="75" font-size="8" text-anchor="middle">pH 3</text>
+                                <circle cx="165" cy="49" r="3" fill="#e11d48"/><text x="165" y="43" font-size="8" text-anchor="middle">30%</text><text x="165" y="75" font-size="8" text-anchor="middle">pH 4</text>
+                                <circle cx="210" cy="63" r="3" fill="#e11d48"/><text x="210" y="57" font-size="8" font-weight="bold" text-anchor="middle">2%</text><text x="210" y="75" font-size="8" font-weight="bold" text-anchor="middle">pH 6</text>
+                            </svg>
+                        </div>
+                    </div>
+                `,
+                question: "Berdasarkan data, aktivitas pepsin setelah pH lambung naik menjadi 6 mengalami penurunan sebesar ... dan penyebabnya adalah ....",
+                options: [
+                    "2%, karena pepsin terdenaturasi oleh kenaikan suhu tubuh",
+                    "98%, karena perubahan pH mengubah muatan ion pada sisi aktif sehingga substrat sulit berikatan",
+                    "98%, karena jumlah protein sebagai substrat di lambung berkurang",
+                    "50%, karena pepsin bekerja optimum pada pH netral",
+                    "100%, karena pepsin habis terpakai dalam reaksi"
+                ],
+                correct: 1, // B
+                explanation: "Dari pH 2 (100%) ke pH 6 (2%), aktivitas pepsin turun sebesar 100% - 2% = 98% karena perubahan pH mengubah muatan ion pada sisi aktif enzim."
+            },
+            {
+                id: 6,
+                topic: "Kofaktor & Struktur Enzim",
+                title: "Kotak Soal #6: Komponen Kofaktor Enzim",
+                stimulus: `
+                    <table class="w-full text-left border-collapse border border-slate-300 text-xs">
+                        <thead>
+                            <tr class="bg-teal-100 text-teal-900">
+                                <th class="border p-1.5">Enzim</th>
+                                <th class="border p-1.5">Kofaktor</th>
+                                <th class="border p-1.5">Jenis Kofaktor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="border p-1.5">Karbonat anhidrase</td><td class="border p-1.5 font-bold">Zn²⁺</td><td class="border p-1.5">Ion logam</td></tr>
+                            <tr class="bg-slate-100"><td class="border p-1.5">Alkohol dehidrogenase</td><td class="border p-1.5 font-bold">NAD⁺</td><td class="border p-1.5">Koenzim</td></tr>
+                            <tr><td class="border p-1.5">Katalase</td><td class="border p-1.5 font-bold">Gugus heme (Fe²⁺)</td><td class="border p-1.5">Gugus prostetik</td></tr>
+                            <tr class="bg-slate-100"><td class="border p-1.5">Heksokinase</td><td class="border p-1.5 font-bold">Mg²⁺</td><td class="border p-1.5">Ion logam</td></tr>
+                        </tbody>
+                    </table>
+                `,
+                question: "Berdasarkan tabel di atas, manakah kesimpulan yang BENAR mengenai komponen kofaktor enzim?",
+                options: [
+                    "NAD⁺ adalah koenzim organik turunan vitamin, gugus heme adalah gugus prostetik yang terikat kuat pada apoenzim, serta Zn²⁺ dan Mg²⁺ adalah kofaktor anorganik",
+                    "Kofaktor adalah bagian murni protein dari enzim yang disebut apoenzim",
+                    "Apoenzim yang berikatan dengan substrat disebut holoenzim",
+                    "Zn²⁺ dan Mg²⁺ merupakan koenzim organik yang berasal dari vitamin",
+                    "Gugus heme pada katalase bukan merupakan bagian dari kofaktor"
+                ],
+                correct: 0, // A
+                explanation: "Tiga pernyataan benar sesuai tabel: (1) NAD⁺ adalah koenzim organik dari vitamin, (2) Gugus heme terikat kuat sebagai gugus prostetik pada apoenzim, dan (3) Zn²⁺ serta Mg²⁺ adalah kofaktor ion logam anorganik."
+            },
+            {
+                id: 7,
+                topic: "Profil Energi Reaksi (Ea)",
+                title: "Kotak Soal #7: Penurunan Energi Aktivasi",
+                stimulus: `
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 items-center">
+                        <table class="w-full text-left border-collapse border border-slate-300 text-xs">
+                            <tr class="bg-amber-100 font-bold"><th class="border p-1.5">Kondisi Reaksi</th><th class="border p-1.5">Energi Aktivasi (Ea)</th></tr>
+                            <tr><td class="border p-1.5">Tanpa Enzim</td><td class="border p-1.5 font-bold text-rose-600">60 kJ/mol</td></tr>
+                            <tr><td class="border p-1.5">Dengan Enzim</td><td class="border p-1.5 font-bold text-emerald-700">25 kJ/mol</td></tr>
+                        </table>
+                        <div class="bg-white p-2 rounded-xl border text-center">
+                            <svg viewBox="0 0 200 85" class="w-full h-20 mx-auto">
+                                <line x1="20" y1="75" x2="190" y2="75" stroke="#64748b" stroke-width="1.5"/>
+                                <line x1="20" y1="10" x2="20" y2="75" stroke="#64748b" stroke-width="1.5"/>
+                                <path d="M 20 52 Q 50 52 85 12 Q 120 52 175 68" fill="none" stroke="#e11d48" stroke-width="2.5"/>
+                                <path d="M 20 52 Q 50 52 85 35 Q 120 52 175 68" fill="none" stroke="#0284c7" stroke-width="2.5" stroke-dasharray="4"/>
+                                <text x="92" y="17" font-size="8" fill="#e11d48" font-weight="bold">Tanpa Enzim (Ea=60)</text>
+                                <text x="92" y="40" font-size="8" fill="#0284c7" font-weight="bold">Dengan Enzim (Ea=25)</text>
+                            </svg>
+                        </div>
+                    </div>
+                `,
+                question: "Berdasarkan grafik dan tabel profil energi reaksi tersebut, pernyataan yang BENAR adalah ....",
+                options: [
+                    "Enzim menurunkan energi aktivasi reaksi sebesar 35 kJ/mol (dari 60 ke 25 kJ/mol) sehingga reaksi berlangsung lebih cepat",
+                    "Enzim mengubah selisih energi awal substrat dan produk akhir",
+                    "Enzim ikut berubah menjadi produk sehingga jumlahnya berkurang setelah reaksi",
+                    "Enzim menaikkan energi aktivasi sebesar 85 kJ/mol agar reaksi mudah terjadi",
+                    "Reaksi tanpa enzim berlangsung lebih cepat karena energi aktivasinya 60 kJ/mol"
+                ],
+                correct: 0, // A
+                explanation: "Enzim menurunkan energi aktivasi (Ea) sebesar 60 - 25 = 35 kJ/mol. Penurunan energi aktivasi ini membuat reaksi metabolisme berlangsung jauh lebih cepat."
+            },
+            {
+                id: 8,
+                topic: "Konsentrasi Substrat",
+                title: "Kotak Soal #8: Laju Reaksi & Titik Jenuh",
+                stimulus: `
+                    <div class="space-y-1.5">
+                        <table class="w-full text-center border-collapse border border-slate-300 text-[11px]">
+                            <tr class="bg-emerald-100 font-bold">
+                                <td class="border p-1">Substrat (mM)</td><td class="border p-1">1</td><td class="border p-1">2</td><td class="border p-1">4</td><td class="border p-1">8</td><td class="border p-1 bg-amber-200">16</td><td class="border p-1 bg-amber-200">32</td>
+                            </tr>
+                            <tr>
+                                <td class="border p-1 font-semibold">Laju (µmol/mnt)</td><td class="border p-1">10</td><td class="border p-1">18</td><td class="border p-1">30</td><td class="border p-1">40</td><td class="border p-1 font-bold text-emerald-700">42</td><td class="border p-1 font-bold text-emerald-700">42</td>
+                            </tr>
+                        </table>
+                        <div class="bg-white p-2 rounded-xl border">
+                            <svg viewBox="0 0 240 75" class="w-full h-16 mx-auto">
+                                <line x1="25" y1="62" x2="225" y2="62" stroke="#64748b" stroke-width="1.5"/>
+                                <line x1="25" y1="10" x2="25" y2="62" stroke="#64748b" stroke-width="1.5"/>
+                                <polyline fill="none" stroke="#15803d" stroke-width="2.5" points="35,52 70,44 105,32 145,20 180,17 215,17"/>
+                                <circle cx="35" cy="52" r="2.5" fill="#15803d"/><text x="35" y="47" font-size="7" text-anchor="middle">10</text>
+                                <circle cx="70" cy="44" r="2.5" fill="#15803d"/><text x="70" y="39" font-size="7" text-anchor="middle">18</text>
+                                <circle cx="105" cy="32" r="2.5" fill="#15803d"/><text x="105" y="27" font-size="7" text-anchor="middle">30</text>
+                                <circle cx="145" cy="20" r="2.5" fill="#15803d"/><text x="145" y="15" font-size="7" text-anchor="middle">40</text>
+                                <circle cx="180" cy="17" r="3.5" fill="#ca8a04"/><text x="180" y="12" font-size="8" font-weight="bold" text-anchor="middle">42 (Jenuh)</text>
+                                <circle cx="215" cy="17" r="3.5" fill="#ca8a04"/><text x="215" y="12" font-size="8" font-weight="bold" text-anchor="middle">42</text>
+                            </svg>
+                        </div>
+                    </div>
+                `,
+                question: "Kesimpulan yang BENAR berdasarkan grafik pengaruh konsentrasi substrat tersebut adalah ....",
+                options: [
+                    "Penambahan substrat dari 16 mM menjadi 32 mM menaikkan laju reaksi hingga dua kali lipat",
+                    "Laju reaksi meningkat hingga mencapai titik jenuh pada substrat 16 mM karena seluruh sisi aktif enzim telah terikat substrat",
+                    "Laju reaksi maksimum (42 µmol/menit) tercapai karena enzim habis terpakai dalam reaksi",
+                    "Konsentrasi substrat sama sekali tidak memengaruhi laju reaksi enzim",
+                    "Jika enzim ditambah pada konsentrasi substrat 32 mM, laju reaksi justru turun menjadi nol"
+                ],
+                correct: 1, // B
+                explanation: "Laju reaksi meningkat seiring bertambahnya substrat hingga mencapai titik jenuh pada konsentrasi 16 mM (42 µmol/menit), di mana seluruh molekul enzim sudah terikat penuh oleh substrat."
+            },
+            {
+                id: 9,
+                topic: "Inhibitor Enzim",
+                title: "Kotak Soal #9: Pengaruh Inhibitor X dan Y",
+                stimulus: `
+                    <table class="w-full text-center border-collapse border border-slate-300 text-xs">
+                        <thead>
+                            <tr class="bg-amber-100 text-slate-900 font-bold">
+                                <th class="border p-1.5">Substrat (mM)</th>
+                                <th class="border p-1.5">Tanpa Inhibitor</th>
+                                <th class="border p-1.5 text-sky-800">Inhibitor X</th>
+                                <th class="border p-1.5 text-rose-800">Inhibitor Y</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="border p-1">2 mM</td><td class="border p-1">20</td><td class="border p-1">8</td><td class="border p-1">10</td></tr>
+                            <tr class="bg-slate-100"><td class="border p-1">10 mM</td><td class="border p-1">40</td><td class="border p-1">30</td><td class="border p-1">20</td></tr>
+                            <tr><td class="border p-1 font-bold">50 mM</td><td class="border p-1 font-bold">48</td><td class="border p-1 font-bold text-emerald-700 bg-emerald-50">47</td><td class="border p-1 font-bold text-rose-700 bg-rose-50">24</td></tr>
+                        </tbody>
+                    </table>
+                `,
+                question: "Berdasarkan data tabel inhibitor X dan Y di atas, pernyataan manakah yang BENAR?",
+                options: [
+                    "Inhibitor X bersifat kompetitif (hambatannya hilang saat substrat dinaikkan ke 50 mM), sedangkan Inhibitor Y bersifat nonkompetitif (menurunkan laju sekitar 50% dari 48 menjadi 24)",
+                    "Inhibitor Y bersaing dengan substrat untuk menempati sisi aktif enzim",
+                    "Penambahan substrat berlebih dapat menghilangkan pengaruh penghambatan Inhibitor Y",
+                    "Inhibitor X bersifat nonkompetitif karena laju maksimumnya tetap rendah pada substrat 50 mM",
+                    "Kedua inhibitor X dan Y tidak memengaruhi laju reaksi pada konsentrasi substrat 2 mM"
+                ],
+                correct: 0, // A
+                explanation: "Inhibitor X adalah inhibitor kompetitif karena saat substrat dinaikkan ke 50 mM, laju reaksi pulih mendekati normal (47 vs 48). Inhibitor Y adalah nonkompetitif karena laju tetap turun 50% (24 vs 48) meski substrat ditambah."
+            },
+            {
+                id: 10,
+                topic: "Percobaan Enzim Katalase",
+                title: "Kotak Soal #10: Uji Katalase Hati Ikan Cakalang",
+                stimulus: `
+                    <div class="space-y-1">
+                        <div class="text-xs font-bold text-slate-700">Data Uji Katalase Hati Ikan Cakalang + 5 mL H₂O₂ (SMAN 1 Batudaa Pantai):</div>
+                        <table class="w-full text-left border-collapse border border-slate-300 text-xs">
+                            <tr class="bg-sky-100 font-bold">
+                                <th class="border p-1 text-center">Tabung</th><th class="border p-1">Perlakuan Hati Ikan</th><th class="border p-1 text-center">Tinggi Busa O₂</th>
+                            </tr>
+                            <tr><td class="border p-1 font-bold text-center">A</td><td class="border p-1">Segar, dipotong kecil</td><td class="border p-1 text-center font-semibold">6 cm</td></tr>
+                            <tr class="bg-slate-100"><td class="border p-1 font-bold text-center">B</td><td class="border p-1">Direbus 5 menit lalu didinginkan</td><td class="border p-1 text-center text-rose-600 font-bold">0 cm</td></tr>
+                            <tr><td class="border p-1 font-bold text-center">C</td><td class="border p-1">Segar + 2 mL HCl (pH 2)</td><td class="border p-1 text-center">1 cm</td></tr>
+                            <tr class="bg-emerald-50"><td class="border p-1 font-bold text-center">D</td><td class="border p-1 font-semibold">Segar, dihaluskan</td><td class="border p-1 text-center text-emerald-700 font-bold">9 cm</td></tr>
+                        </table>
+                    </div>
+                `,
+                question: "Berdasarkan data percobaan uji katalase tersebut, pernyataan manakah yang BENAR?",
+                options: [
+                    "Tabung B menghasilkan busa paling banyak karena direbus terlebih dahulu",
+                    "Tabung C membuktikan bahwa enzim katalase bekerja optimum pada suasana asam kuat (pH 2)",
+                    "Tabung B tidak menghasilkan busa (0 cm) karena katalase terdenaturasi panas saat direbus, dan Tabung D menghasilkan busa terbanyak (9 cm) karena penghalusan memperluas permukaan kontak katalase dengan H₂O₂",
+                    "Tabung A memiliki aktivitas katalase lebih tinggi daripada Tabung D",
+                    "Gelembung busa yang terbentuk pada percobaan tersebut adalah gas karbon dioksida (CO₂)"
+                ],
+                correct: 2, // C
+                explanation: "Pada Tabung B, perebusan merusak struktur protein enzim katalase (denaturasi) sehingga tidak ada busa (0 cm). Pada Tabung D, penghalusan membuat lebih banyak enzim katalase keluar dan berkontak dengan substrat H₂O₂ (busa 9 cm)."
+            }
+        ];
+
+        /**************************************************************
+         * 4. GAME STATE & WORLD CONFIGURATION (ADAPTIVE MOBILE VIEW)
+         **************************************************************/
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const WORLD_LENGTH = 8400; // Total horizontal distance to Flagpole
+        const GROUND_OFFSET = 128; // Height of ground from bottom so thumb buttons don't cover Mario
+
+        // Logical camera scaling so Portrait & Landscape phones show an ideal field of view
+        let viewScale = 1;
+        let viewW = window.innerWidth;
+        let viewH = window.innerHeight;
+
+        const studentInfo = {
+            name: '',
+            absen: '',
+            className: '',
+            violations: 0
+        };
+
+        const gameState = {
+            running: false,
+            pausedForModal: false,
+            score: 0,
+            answeredCount: 0,
+            answersLog: {}, // { qIndex: { chosen, isCorrect } }
+            activeQuestionIndex: null,
+            questionTimer: null,
+            timeLeft: 40,
+            cameraX: 0,
+            particles: [],
+            floatingTexts: []
+        };
+
+        const mario = {
+            x: 160,
+            y: 0,
+            w: 40,
+            h: 52,
+            vx: 0,
+            vy: 0,
+            speed: 4.5,
+            dir: 1, // 1 = Right, -1 = Left
+            onGround: false,
+            isHoldingJump: false,
+            jumpHoldFrames: 0,
+            maxJumpHoldFrames: 24,
+            animFrame: 0,
+            invincibleTimer: 0
+        };
+
+        // World Entities
+        let questionBlocks = [];
+        let brickBlocks = [];
+        let pipes = [];
+        let enemies = [];
+        let decorCoins = [];
+        let flagpole = { x: 8050, flagY: 0, reached: false };
+
+        function buildWorld() {
+            questionBlocks = [];
+            brickBlocks = [];
+            pipes = [];
+            enemies = [];
+            decorCoins = [];
+            flagpole.reached = false;
+
+            // Place 10 Question Boxes spaced evenly from x = 700 to x = 7360
+            for (let i = 0; i < 10; i++) {
+                const qx = 700 + i * 740;
+                // Easy height for mobile players to hit from below or touch
+                const elevation = (i % 2 === 0) ? 132 : 148;
+                
+                // Flanking bricks
+                brickBlocks.push({ x: qx - 54, yOffset: elevation, w: 50, h: 50 });
+                brickBlocks.push({ x: qx + 58, yOffset: elevation, w: 50, h: 50 });
+
+                questionBlocks.push({
+                    index: i,
+                    number: i + 1,
+                    x: qx,
+                    yOffset: elevation, // height above ground
+                    w: 56,
+                    h: 56,
+                    answered: false,
+                    bounceY: 0
+                });
+
+                // Place obstacles between question boxes
+                const midX = qx + 360;
+                const pipeH = (i % 3 === 0) ? 64 : 80;
+                pipes.push({
+                    x: midX - 90,
+                    w: 60,
+                    h: pipeH
+                });
+
+                // Stepping brick platform near taller pipes
+                if (pipeH > 72) {
+                    brickBlocks.push({ x: midX - 200, yOffset: 85, w: 48, h: 48 });
+                }
+
+                // Patrolling Enemy (Goomba / Koopa / Crab)
+                enemies.push({
+                    x: midX + 85,
+                    minX: midX + 20,
+                    maxX: midX + 220,
+                    w: 40,
+                    h: 40,
+                    vx: 1.5,
+                    type: i < 3 ? 'goomba' : (i < 5 ? 'beetle' : (i < 8 ? 'crab' : 'goomba')),
+                    squished: false,
+                    squishTimer: 0
+                });
+
+                // Collectible decorative coins along jump arcs
+                for (let c = 0; c < 3; c++) {
+                    decorCoins.push({
+                        x: midX - 90 + (c - 1) * 42,
+                        yOffset: pipeH + 72 + (c === 1 ? 24 : 0),
+                        collected: false
+                    });
+                }
+            }
+        }
+
+        function getCurrentZoneIndex() {
+            const x = mario.x;
+            if (x < 2600) return 0; // Zone 1: Overworld (Soal 1-3)
+            if (x < 4100) return 1; // Zone 2: Underground (Soal 4-5)
+            if (x < 6300) return 2; // Zone 3: Underwater (Soal 6-8)
+            return 3;               // Zone 4: Bowser's Castle (Soal 9-10 + Finish)
+        }
+
+        const zoneNames = [
+            "Zona 1: Luar Ruangan",
+            "Zona 2: Bawah Tanah",
+            "Zona 3: Bawah Air",
+            "Zona 4: Kastil Bowser"
+        ];
+
+        /**************************************************************
+         * 5. HUD, FULLSCREEN & REGISTRATION FUNCTIONS
+         **************************************************************/
+        function toggleFullScreen() {
+            const docEl = document.documentElement;
+            const icon = document.getElementById('icon-fullscreen');
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                if (docEl.requestFullscreen) {
+                    docEl.requestFullscreen().catch(() => {});
+                } else if (docEl.webkitRequestFullscreen) {
+                    docEl.webkitRequestFullscreen();
+                }
+                if (icon) icon.className = 'fa-solid fa-compress text-xs sm:text-sm';
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen().catch(() => {});
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
+                if (icon) icon.className = 'fa-solid fa-expand text-xs sm:text-sm';
+            }
+        }
+
+        function renderHudBoxes() {
+            const container = document.getElementById('hud-boxes');
+            container.innerHTML = '';
+            for (let i = 0; i < 10; i++) {
+                const qb = questionBlocks[i];
+                const log = gameState.answersLog[i];
+                let bg = 'bg-amber-400 text-slate-900 border-white';
+                let label = i + 1;
+                if (qb && qb.answered) {
+                    if (log && log.isCorrect) {
+                        bg = 'bg-emerald-500 text-white border-emerald-200';
+                        label = '✓';
+                    } else {
+                        bg = 'bg-rose-600 text-white border-rose-300';
+                        label = '✗';
+                    }
+                }
+                const badge = document.createElement('div');
+                badge.className = `w-5 h-5 sm:w-6 sm:h-6 rounded-md font-bold text-[10px] sm:text-xs border flex items-center justify-center shrink-0 transition ${bg}`;
+                badge.textContent = label;
+                container.appendChild(badge);
+            }
+            document.getElementById('hud-mobile-progress').textContent = `${gameState.answeredCount}/10`;
+            document.getElementById('hud-score').textContent = String(gameState.score).padStart(3, '0');
+        }
+
+        function startGame() {
+            const nameVal = document.getElementById('input-name').value.trim();
+            const absenVal = document.getElementById('input-absen').value.trim();
+            const classVal = document.getElementById('input-class').value.trim();
+            const errBox = document.getElementById('login-error');
+
+            if (!nameVal || !absenVal || !classVal) {
+                errBox.classList.remove('hidden');
+                return;
+            }
+            errBox.classList.add('hidden');
+
+            // Hide mobile virtual keyboard
+            if (document.activeElement) document.activeElement.blur();
+
+            studentInfo.name = nameVal;
+            studentInfo.absen = absenVal;
+            studentInfo.className = classVal;
+
+            document.getElementById('hud-name').textContent = `${studentInfo.name} (${studentInfo.absen})`;
+            document.getElementById('hud-class').textContent = studentInfo.className;
+
+            document.getElementById('login-modal').classList.add('hidden');
+            document.getElementById('hud-bar').classList.remove('hidden');
+            document.getElementById('controls-bar').classList.remove('hidden');
+
+            initAudio();
+            resizeCanvas();
+            resetProgress(false);
+            gameState.running = true;
+            startBGM();
+        }
+
+        function resetProgress(isSecurityPenalty = false) {
+            gameState.score = 0;
+            gameState.answeredCount = 0;
+            gameState.answersLog = {};
+            gameState.activeQuestionIndex = null;
+            gameState.pausedForModal = false;
+            if (gameState.questionTimer) clearInterval(gameState.questionTimer);
+
+            buildWorld();
+            const groundY = viewH - GROUND_OFFSET;
+            mario.x = 160;
+            mario.y = groundY - mario.h;
+            mario.vx = 0;
+            mario.vy = 0;
+            mario.dir = 1;
+            setDirection(1);
+            renderHudBoxes();
+        }
+
+        function toggleDirection() {
+            initAudio();
+            setDirection(mario.dir === 1 ? -1 : 1);
+            playTone(440, 'triangle', 0.08, 0.08);
+        }
+
+        function setDirection(dir) {
+            mario.dir = dir;
+            const btnToggle = document.getElementById('btn-toggle-dir');
+            const btnLabel = document.getElementById('btn-dir-label');
+            const statusBadge = document.getElementById('dir-status-badge');
+
+            if (dir === -1) {
+                if (btnLabel) btnLabel.textContent = "LARI KANAN ➡️";
+                if (btnToggle) {
+                    btnToggle.className = "col-span-5 sm:col-span-4 mario-btn py-3.5 sm:py-4 px-2 rounded-2xl bg-emerald-500 active:bg-emerald-400 text-white font-extrabold text-xs sm:text-sm border-2 border-yellow-300 flex flex-col items-center justify-center gap-0.5 shadow-xl";
+                }
+                if (statusBadge) {
+                    statusBadge.textContent = "Lari: ⬅️ BALIK KIRI";
+                    statusBadge.className = "text-[10px] sm:text-xs font-extrabold text-amber-300 whitespace-nowrap";
+                }
+            } else {
+                if (btnLabel) btnLabel.textContent = "⬅️ BALIK KIRI";
+                if (btnToggle) {
+                    btnToggle.className = "col-span-5 sm:col-span-4 mario-btn py-3.5 sm:py-4 px-2 rounded-2xl bg-amber-500 active:bg-amber-400 text-slate-900 font-extrabold text-xs sm:text-sm border-2 border-white flex flex-col items-center justify-center gap-0.5 shadow-xl";
+                }
+                if (statusBadge) {
+                    statusBadge.textContent = "Lari: KANAN ➡️";
+                    statusBadge.className = "text-[10px] sm:text-xs font-extrabold text-emerald-300 whitespace-nowrap";
+                }
+            }
+        }
+
+        /**************************************************************
+         * 6. VARIABLE JUMP & ONE-HANDED MOBILE TOUCH CONTROLS
+         **************************************************************/
+        let jumpBufferFrames = 0; // Helps mobile players jump smoothly right as Mario lands
+
+        function startJumpHold(e) {
+            if (e && e.target && (e.target.closest('button') && e.target.closest('button').id !== 'btn-jump')) {
+                return;
+            }
+            if (!gameState.running || gameState.pausedForModal) return;
+            initAudio();
+
+            const btnJumpEl = document.getElementById('btn-jump');
+            if (btnJumpEl) btnJumpEl.classList.add('pressed');
+
+            if (mario.onGround) {
+                executeJump();
+            } else {
+                // Buffer the jump for 8 frames in case thumb taps slightly before touching ground
+                jumpBufferFrames = 8;
+                mario.isHoldingJump = true;
+            }
+        }
+
+        function executeJump() {
+            mario.vy = -9.8; // Base jump impulse
+            mario.onGround = false;
+            mario.isHoldingJump = true;
+            mario.jumpHoldFrames = 0;
+            jumpBufferFrames = 0;
+            sfxJump();
+            spawnParticles(mario.x + mario.w / 2, mario.y + mario.h, '#ffffff', 6);
+        }
+
+        function endJumpHold() {
+            mario.isHoldingJump = false;
+            const btnJumpEl = document.getElementById('btn-jump');
+            if (btnJumpEl) btnJumpEl.classList.remove('pressed');
+            document.getElementById('jump-charge-bar').style.width = '0%';
+        }
+
+        // Attach One-Handed Pointer/Touch Listeners to Canvas & Jump Button
+        const canvasContainer = document.getElementById('canvas-container');
+        const btnJump = document.getElementById('btn-jump');
+
+        canvasContainer.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            startJumpHold(e);
+        });
+
+        btnJump.addEventListener('pointerdown', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            startJumpHold(e);
+        });
+
+        window.addEventListener('pointerup', endJumpHold);
+        window.addEventListener('pointercancel', endJumpHold);
+
+        // Keyboard Support for Laptop/Chromebook testing
+        window.addEventListener('keydown', (e) => {
+            if (!gameState.running || gameState.pausedForModal) return;
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+                if (!e.repeat) startJumpHold();
+            } else if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+                setDirection(-1);
+            } else if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+                setDirection(1);
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+                endJumpHold();
+            }
+        });
+
+        /**************************************************************
+         * 7. ANTI-TAB SWITCH SECURITY SYSTEM
+         **************************************************************/
+        function triggerSecurityViolation() {
+            if (!gameState.running) return;
+            // Avoid double-triggering if security modal is already open
+            const secModal = document.getElementById('security-modal');
+            if (!secModal.classList.contains('hidden')) return;
+
+            studentInfo.violations++;
+            gameState.pausedForModal = true;
+            if (gameState.questionTimer) clearInterval(gameState.questionTimer);
+
+            // Hide question modal if open
+            document.getElementById('question-modal').classList.add('hidden');
+            secModal.classList.remove('hidden');
+            sfxSiren();
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && gameState.running) {
+                triggerSecurityViolation();
+            }
+        });
+
+        window.addEventListener('blur', () => {
+            if (gameState.running) {
+                triggerSecurityViolation();
+            }
+        });
+
+        function acknowledgeSecurityReset() {
+            document.getElementById('security-modal').classList.add('hidden');
+            resetProgress(true);
+        }
+
+        /**************************************************************
+         * 8. QUESTION MODAL & 40-SECOND COUNTDOWN LOGIC
+         **************************************************************/
+        function openQuestionModal(qIndex) {
+            gameState.pausedForModal = true;
+            gameState.activeQuestionIndex = qIndex;
+            endJumpHold();
+            sfxCoinBox();
+
+            const qData = questionsData[qIndex];
+            document.getElementById('q-number-badge').textContent = `?${qData.id}`;
+            document.getElementById('q-topic-badge').textContent = qData.topic;
+            document.getElementById('q-title').textContent = qData.title;
+            document.getElementById('q-text').textContent = qData.question;
+
+            const stimEl = document.getElementById('q-stimulus');
+            if (qData.stimulus) {
+                stimEl.innerHTML = qData.stimulus;
+                stimEl.classList.remove('hidden');
+            } else {
+                stimEl.classList.add('hidden');
+            }
+
+            // Render 5 Touch-Friendly Options A-E
+            const optsContainer = document.getElementById('q-options');
+            optsContainer.innerHTML = '';
+            const letters = ['A', 'B', 'C', 'D', 'E'];
+
+            qData.options.forEach((optText, idx) => {
+                const btn = document.createElement('button');
+                btn.id = `opt-btn-${idx}`;
+                btn.onclick = () => submitAnswer(idx);
+                btn.className = "w-full min-h-[50px] text-left p-3 sm:p-3.5 rounded-2xl border-2 border-slate-300 active:border-amber-500 active:bg-amber-50 hover:border-amber-500 transition flex items-center gap-3 group bg-white shadow-sm";
+                btn.innerHTML = `
+                    <span class="w-8 h-8 rounded-xl bg-slate-800 group-hover:bg-amber-500 text-white group-hover:text-slate-900 font-bold text-xs sm:text-sm flex items-center justify-center shrink-0 transition">${letters[idx]}</span>
+                    <span class="text-xs sm:text-sm font-semibold text-slate-800 leading-snug">${optText}</span>
+                `;
+                optsContainer.appendChild(btn);
+            });
+
+            document.getElementById('q-feedback').classList.add('hidden');
+            document.getElementById('question-modal').classList.remove('hidden');
+
+            // Reset scroll to top of modal
+            const scrollBody = document.getElementById('q-scroll-body');
+            if (scrollBody) scrollBody.scrollTop = 0;
+
+            // Start 40-second countdown
+            gameState.timeLeft = 40;
+            updateTimerUI();
+            if (gameState.questionTimer) clearInterval(gameState.questionTimer);
+            gameState.questionTimer = setInterval(() => {
+                gameState.timeLeft--;
+                updateTimerUI();
+                if (gameState.timeLeft <= 10 && gameState.timeLeft > 0) {
+                    playTone(880, 'sine', 0.06, 0.08);
+                }
+                if (gameState.timeLeft <= 0) {
+                    clearInterval(gameState.questionTimer);
+                    submitAnswer(-1); // Timeout = Wrong (0 points)
+                }
+            }, 1000);
+        }
+
+        function updateTimerUI() {
+            const tText = document.getElementById('q-timer-text');
+            const tBar = document.getElementById('q-timer-bar');
+            tText.textContent = `${gameState.timeLeft}d`;
+            const pct = Math.max(0, (gameState.timeLeft / 40) * 100);
+            tBar.style.width = `${pct}%`;
+
+            if (gameState.timeLeft <= 10) {
+                tBar.className = 'h-full bg-rose-600 transition-all duration-300';
+                tText.className = 'font-pixel text-xs sm:text-sm text-rose-400 animate-ping';
+            } else if (gameState.timeLeft <= 20) {
+                tBar.className = 'h-full bg-amber-500 transition-all duration-300';
+                tText.className = 'font-pixel text-xs sm:text-sm text-amber-300';
+            } else {
+                tBar.className = 'h-full bg-emerald-500 transition-all duration-300';
+                tText.className = 'font-pixel text-xs sm:text-sm text-yellow-300';
+            }
+        }
+
+        function submitAnswer(chosenIdx) {
+            if (gameState.questionTimer) clearInterval(gameState.questionTimer);
+            const qIndex = gameState.activeQuestionIndex;
+            const qData = questionsData[qIndex];
+            const qb = questionBlocks[qIndex];
+
+            if (qb.answered) return; // Only 1 attempt allowed!
+            qb.answered = true;
+            gameState.answeredCount++;
+
+            const isCorrect = (chosenIdx === qData.correct);
+            if (isCorrect) {
+                gameState.score += 10;
+                sfxCorrect();
+                addFloatingText(qb.x, viewH - GROUND_OFFSET - qb.yOffset - 30, "+10 POIN!", "#fde047");
+            } else {
+                sfxWrong();
+                addFloatingText(qb.x, viewH - GROUND_OFFSET - qb.yOffset - 30, "0 POIN", "#fb7185");
+            }
+
+            gameState.answersLog[qIndex] = {
+                chosen: chosenIdx,
+                isCorrect: isCorrect
+            };
+
+            // Lock all option buttons and highlight chosen vs correct
+            const letters = ['A', 'B', 'C', 'D', 'E'];
+            qData.options.forEach((_, idx) => {
+                const btn = document.getElementById(`opt-btn-${idx}`);
+                btn.disabled = true;
+                btn.onclick = null;
+                if (idx === qData.correct) {
+                    btn.className = "w-full min-h-[50px] text-left p-3 sm:p-3.5 rounded-2xl border-2 border-emerald-600 bg-emerald-50 flex items-center gap-3";
+                } else if (idx === chosenIdx && !isCorrect) {
+                    btn.className = "w-full min-h-[50px] text-left p-3 sm:p-3.5 rounded-2xl border-2 border-rose-600 bg-rose-50 flex items-center gap-3 opacity-95";
+                } else {
+                    btn.className = "w-full min-h-[50px] text-left p-3 sm:p-3.5 rounded-2xl border border-slate-200 bg-slate-100 flex items-center gap-3 opacity-45";
+                }
+            });
+
+            // Show Feedback Box & auto-scroll down on mobile so Continue button is immediately visible
+            const fbBox = document.getElementById('q-feedback');
+            const fbTitle = document.getElementById('q-feedback-title');
+            const fbDesc = document.getElementById('q-feedback-desc');
+            fbBox.classList.remove('hidden');
+
+            if (isCorrect) {
+                fbBox.className = "rounded-2xl p-3.5 sm:p-4 border-2 border-emerald-500 bg-emerald-50 text-emerald-950 space-y-2";
+                fbTitle.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600 text-lg"></i> <span>JAWABAN BENAR! (+10 Poin)</span>`;
+            } else if (chosenIdx === -1) {
+                fbBox.className = "rounded-2xl p-3.5 sm:p-4 border-2 border-rose-500 bg-rose-50 text-rose-950 space-y-2";
+                fbTitle.innerHTML = `<i class="fa-solid fa-hourglass-end text-rose-600 text-lg"></i> <span>WAKTU HABIS! (Nilai +0)</span>`;
+            } else {
+                fbBox.className = "rounded-2xl p-3.5 sm:p-4 border-2 border-rose-500 bg-rose-50 text-rose-950 space-y-2";
+                fbTitle.innerHTML = `<i class="fa-solid fa-circle-xmark text-rose-600 text-lg"></i> <span>JAWABAN SALAH (Nilai +0) — Kunci: ${letters[qData.correct]}</span>`;
+            }
+            fbDesc.innerHTML = `<b>Pembahasan:</b> ${qData.explanation}`;
+
+            renderHudBoxes();
+
+            setTimeout(() => {
+                fbBox.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }, 80);
+        }
+
+        function closeQuestionAndResume() {
+            document.getElementById('question-modal').classList.add('hidden');
+            gameState.pausedForModal = false;
+            gameState.activeQuestionIndex = null;
+
+            // Check if there are any earlier unanswered boxes behind Mario; if not, face right
+            const missedEarlier = questionBlocks.find(b => !b.answered && b.x < mario.x - 40);
+            if (!missedEarlier) {
+                setDirection(1);
+            }
+        }
+
+        function showVictoryScreen() {
+            gameState.pausedForModal = true;
+            sfxVictory();
+
+            document.getElementById('rep-name').textContent = studentInfo.name;
+            document.getElementById('rep-absen').textContent = `No. Absen: ${studentInfo.absen}`;
+            document.getElementById('rep-class').textContent = `Kelas: ${studentInfo.className}`;
+            document.getElementById('rep-violations').textContent = `Reset Keamanan Tab: ${studentInfo.violations}x`;
+            document.getElementById('rep-score').textContent = gameState.score;
+
+            const correctTotal = Object.values(gameState.answersLog).filter(a => a.isCorrect).length;
+            document.getElementById('rep-correct').textContent = `Benar: ${correctTotal} / 10 Soal`;
+
+            const listEl = document.getElementById('rep-list');
+            listEl.innerHTML = '';
+            const letters = ['A', 'B', 'C', 'D', 'E'];
+
+            questionsData.forEach((q, idx) => {
+                const log = gameState.answersLog[idx];
+                const isOk = log && log.isCorrect;
+                const chosenLetter = (log && log.chosen >= 0) ? letters[log.chosen] : 'Waktu Habis';
+                const row = document.createElement('div');
+                row.className = `p-3 rounded-xl border flex items-center justify-between gap-2 text-xs sm:text-sm ${isOk ? 'bg-emerald-50 border-emerald-300' : 'bg-rose-50 border-rose-300'}`;
+                row.innerHTML = `
+                    <div class="font-semibold text-slate-800">
+                        <span class="font-bold">${idx + 1}. ${q.topic}</span>
+                        <div class="text-xs text-slate-500">Jawaban Siswa: <b>${chosenLetter}</b> | Kunci: <b>${letters[q.correct]}</b></div>
+                    </div>
+                    <div class="font-extrabold px-2.5 py-1 rounded-lg shrink-0 ${isOk ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'}">
+                        ${isOk ? '+10 Poin' : '0 Poin'}
+                    </div>
+                `;
+                listEl.appendChild(row);
+            });
+
+            document.getElementById('victory-modal').classList.remove('hidden');
+        }
+
+        function playAgain() {
+            document.getElementById('victory-modal').classList.add('hidden');
+            resetProgress(false);
+        }
+
+        /**************************************************************
+         * 9. PHYSICS, COLLISIONS & PARTICLE EFFECTS
+         **************************************************************/
+        function spawnParticles(x, y, color, count = 8) {
+            for (let i = 0; i < count; i++) {
+                gameState.particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.8) * 6,
+                    size: Math.random() * 6 + 3,
+                    color: color,
+                    life: 25
+                });
+            }
+        }
+
+        function addFloatingText(x, y, text, color) {
+            gameState.floatingTexts.push({
+                x, y, text, color, life: 45
+            });
+        }
+
+        function rectIntersect(ax, ay, aw, ah, bx, by, bw, bh) {
+            return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+        }
+
+        function updatePhysics() {
+            if (!gameState.running || gameState.pausedForModal) return;
+
+            const groundY = viewH - GROUND_OFFSET;
+
+            // Update HUD Zone Name
+            const zIdx = getCurrentZoneIndex();
+            document.getElementById('hud-zone').innerHTML = `<i class="fa-solid fa-map-location-dot"></i> <span>${zoneNames[zIdx]}</span>`;
+
+            // Check if player skipped an unanswered question box
+            const skippedBox = questionBlocks.find(b => !b.answered && b.x + b.w < mario.x - 100);
+            const banner = document.getElementById('missed-box-banner');
+            if (skippedBox) {
+                banner.classList.remove('hidden');
+                document.getElementById('missed-box-text').textContent = `Kotak Soal #${skippedBox.number} terlewat di belakang!`;
+            } else {
+                banner.classList.add('hidden');
+            }
+
+            // Variable Jump Hold Logic (holding screen/button boosts upward velocity)
+            if (mario.isHoldingJump && mario.jumpHoldFrames < mario.maxJumpHoldFrames && mario.vy < 0) {
+                mario.vy -= 0.44; // Sustained upward lift while held!
+                mario.jumpHoldFrames++;
+                const pct = Math.min(100, (mario.jumpHoldFrames / mario.maxJumpHoldFrames) * 100);
+                document.getElementById('jump-charge-bar').style.width = `${pct}%`;
+            }
+
+            // Horizontal Auto-Run movement
+            mario.vx = mario.speed * mario.dir;
+            mario.x += mario.vx;
+
+            // Clamp world boundaries
+            if (mario.x < 60) {
+                mario.x = 60;
+                setDirection(1);
+            }
+            if (mario.x > WORLD_LENGTH - 150) {
+                mario.x = WORLD_LENGTH - 150;
+            }
+
+            // Horizontal Pipe Collisions
+            for (const p of pipes) {
+                const py = groundY - p.h;
+                if (rectIntersect(mario.x, mario.y, mario.w, mario.h, p.x, py, p.w, p.h)) {
+                    if (mario.vx > 0) {
+                        mario.x = p.x - mario.w;
+                    } else if (mario.vx < 0) {
+                        mario.x = p.x + p.w;
+                    }
+                }
+            }
+
+            // Apply Gravity
+            mario.vy += 0.62;
+            if (mario.vy > 13) mario.vy = 13;
+            mario.y += mario.vy;
+            mario.onGround = false;
+
+            // Ground Collision
+            if (mario.y + mario.h >= groundY) {
+                mario.y = groundY - mario.h;
+                mario.vy = 0;
+                mario.onGround = true;
+            }
+
+            // Pipe Top Landing
+            for (const p of pipes) {
+                const py = groundY - p.h;
+                if (rectIntersect(mario.x, mario.y, mario.w, mario.h, p.x, py, p.w, p.h)) {
+                    if (mario.vy > 0 && mario.y + mario.h - mario.vy <= py + 14) {
+                        mario.y = py - mario.h;
+                        mario.vy = 0;
+                        mario.onGround = true;
+                    }
+                }
+            }
+
+            // Brick Blocks Collision
+            for (const b of brickBlocks) {
+                const by = groundY - b.yOffset;
+                if (rectIntersect(mario.x, mario.y, mario.w, mario.h, b.x, by, b.w, b.h)) {
+                    if (mario.vy > 0 && mario.y + mario.h - mario.vy <= by + 14) {
+                        mario.y = by - mario.h;
+                        mario.vy = 0;
+                        mario.onGround = true;
+                    } else if (mario.vy < 0 && mario.y - mario.vy >= by + b.h - 14) {
+                        mario.y = by + b.h;
+                        mario.vy = 2;
+                        sfxBump();
+                    }
+                }
+            }
+
+            // Execute buffered jump if thumb was pressed right before landing
+            if (jumpBufferFrames > 0) {
+                jumpBufferFrames--;
+                if (mario.onGround) {
+                    executeJump();
+                }
+            }
+
+            // Question Blocks [?] Collision (Hit from underneath or touch directly!)
+            for (const qb of questionBlocks) {
+                if (qb.bounceY > 0) qb.bounceY -= 1.5;
+                const qy = groundY - qb.yOffset - qb.bounceY;
+
+                if (rectIntersect(mario.x, mario.y, mario.w, mario.h, qb.x, qy, qb.w, qb.h)) {
+                    if (mario.vy < 0 && mario.y - mario.vy >= qy + qb.h - 18) {
+                        mario.y = qy + qb.h;
+                        mario.vy = 3;
+                    } else if (mario.vy > 0 && mario.y + mario.h - mario.vy <= qy + 14) {
+                        mario.y = qy - mario.h;
+                        mario.vy = 0;
+                        mario.onGround = true;
+                    }
+
+                    if (!qb.answered) {
+                        qb.bounceY = 14;
+                        spawnParticles(qb.x + qb.w / 2, qy + qb.h / 2, '#facc15', 14);
+                        openQuestionModal(qb.index);
+                        break;
+                    }
+                }
+            }
+
+            // Collectible Decorative Coins
+            for (const c of decorCoins) {
+                if (c.collected) continue;
+                const cy = groundY - c.yOffset;
+                if (rectIntersect(mario.x, mario.y, mario.w, mario.h, c.x - 14, cy - 14, 28, 28)) {
+                    c.collected = true;
+                    playTone(1318.5, 'sine', 0.12, 0.07);
+                    spawnParticles(c.x, cy, '#fde047', 6);
+                }
+            }
+
+            // Patrolling Enemies (Goomba / Koopa)
+            if (mario.invincibleTimer > 0) mario.invincibleTimer--;
+
+            for (const en of enemies) {
+                if (en.squished) {
+                    if (en.squishTimer > 0) en.squishTimer--;
+                    continue;
+                }
+                en.x += en.vx;
+                if (en.x < en.minX || en.x > en.maxX) en.vx *= -1;
+
+                const ey = groundY - en.h;
+                if (rectIntersect(mario.x, mario.y, mario.w, mario.h, en.x, ey, en.w, en.h)) {
+                    // Stomp from above
+                    if (mario.vy > 1 && mario.y + mario.h - mario.vy <= ey + 20) {
+                        en.squished = true;
+                        en.squishTimer = 180;
+                        mario.vy = -8.5;
+                        sfxCoinBox();
+                        spawnParticles(en.x + en.w / 2, ey + en.h / 2, '#fb923c', 10);
+                    } else if (mario.invincibleTimer === 0) {
+                        // Friendly small knockback without losing score
+                        mario.vy = -5.5;
+                        mario.x -= mario.dir * 38;
+                        mario.invincibleTimer = 45;
+                        sfxBump();
+                        spawnParticles(mario.x + mario.w / 2, mario.y + mario.h / 2, '#ef4444', 8);
+                    }
+                }
+            }
+
+            for (const en of enemies) {
+                if (en.squished && en.squishTimer === 0) {
+                    en.squished = false;
+                }
+            }
+
+            // Flagpole Finish Line Check
+            if (Math.abs(mario.x - flagpole.x) < 48) {
+                if (gameState.answeredCount >= 10 && !flagpole.reached) {
+                    flagpole.reached = true;
+                    showVictoryScreen();
+                } else if (gameState.answeredCount < 10) {
+                    mario.x = flagpole.x - 80;
+                    setDirection(-1);
+                    sfxBump();
+                    addFloatingText(flagpole.x - 60, groundY - 140, `Jawab Semua 10 Kotak Soal Dulu! (${gameState.answeredCount}/10)`, "#fb7185");
+                }
+            }
+
+            // Smooth Camera Follow Adapted for Portrait/Landscape Mobile Screen
+            const lookAhead = mario.dir === 1 ? viewW * 0.25 : viewW * 0.62;
+            const targetCamX = mario.x - lookAhead;
+            gameState.cameraX += (targetCamX - gameState.cameraX) * 0.14;
+            gameState.cameraX = Math.max(0, Math.min(WORLD_LENGTH - viewW, gameState.cameraX));
+
+            mario.animFrame += 0.22;
+
+            // Update Particles & Floating Texts
+            gameState.particles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+            });
+            gameState.particles = gameState.particles.filter(p => p.life > 0);
+
+            gameState.floatingTexts.forEach(ft => {
+                ft.y -= 1.2;
+                ft.life--;
+            });
+            gameState.floatingTexts = gameState.floatingTexts.filter(ft => ft.life > 0);
+        }
+
+        /**************************************************************
+         * 10. CANVAS RENDERING (MOBILE-OPTIMIZED VIEWPORT SCALING)
+         **************************************************************/
+        function resizeCanvas() {
+            const oldGroundY = viewH ? (viewH - GROUND_OFFSET) : (window.innerHeight - GROUND_OFFSET);
+            const distAboveGround = oldGroundY - mario.y;
+
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            // On narrow Portrait phones (<520px), zoom out slightly (0.78x) so ahead obstacles & boxes are clearly visible!
+            if (canvas.width < 520) {
+                viewScale = 0.78;
+            } else if (canvas.width < 820 && canvas.height < 500) {
+                // Landscape phone
+                viewScale = 0.82;
+            } else {
+                viewScale = 1;
+            }
+
+            viewW = canvas.width / viewScale;
+            viewH = canvas.height / viewScale;
+
+            const newGroundY = viewH - GROUND_OFFSET;
+            mario.y = Math.min(newGroundY - mario.h, newGroundY - distAboveGround);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function drawGame() {
+            const w = viewW;
+            const h = viewH;
+            const groundY = h - GROUND_OFFSET;
+            const camX = gameState.cameraX;
+            const zoneIdx = getCurrentZoneIndex();
+
+            ctx.save();
+            ctx.scale(viewScale, viewScale);
+
+            // 1. Sky / Background Gradient per Zone
+            const grad = ctx.createLinearGradient(0, 0, 0, h);
+            if (zoneIdx === 0) {
+                // Zone 1: Overworld Bright Sky
+                grad.addColorStop(0, '#38bdf8');
+                grad.addColorStop(1, '#bae6fd');
+            } else if (zoneIdx === 1) {
+                // Zone 2: Underground Deep Cavern
+                grad.addColorStop(0, '#090d16');
+                grad.addColorStop(1, '#1e1b4b');
+            } else if (zoneIdx === 2) {
+                // Zone 3: Underwater Aqua Sea
+                grad.addColorStop(0, '#0284c7');
+                grad.addColorStop(1, '#0d9488');
+            } else {
+                // Zone 4: Bowser's Castle Lava Glow
+                grad.addColorStop(0, '#18181b');
+                grad.addColorStop(0.7, '#450a0a');
+                grad.addColorStop(1, '#991b1b');
+            }
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, w, h);
+
+            ctx.save();
+            ctx.translate(-camX, 0);
+
+            // 2. Zone-Specific Scenery & Parallax Decorations
+            for (let gx = 0; gx < WORLD_LENGTH; gx += 450) {
+                if (gx < 2600) {
+                    // Overworld Clouds, Green Hills & Bushes
+                    drawCloud(gx + 100, 110, 1.1);
+                    drawCloud(gx + 310, 165, 0.85);
+                    drawHill(gx + 60, groundY, 180, 95, '#16a34a');
+                    drawHill(gx + 280, groundY, 120, 60, '#22c55e');
+                } else if (gx < 4100) {
+                    // Underground Ceiling Bricks & Cavern Pillars
+                    ctx.fillStyle = '#1e3a8a';
+                    ctx.fillRect(gx, 65, 450, 28);
+                    ctx.strokeStyle = '#60a5fa';
+                    ctx.strokeRect(gx, 65, 450, 28);
+                    // Glowing crystals
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.beginPath();
+                    ctx.moveTo(gx + 180, 93);
+                    ctx.lineTo(gx + 195, 130);
+                    ctx.lineTo(gx + 210, 93);
+                    ctx.fill();
+                } else if (gx < 6300) {
+                    // Underwater Coral Reefs, Seaweed & Rising Bubbles
+                    drawCoral(gx + 90, groundY, '#f43f5e');
+                    drawCoral(gx + 290, groundY, '#a855f7');
+                    const bubbleY = (h - ((Date.now() * 0.06 + gx) % (h - 120)));
+                    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(gx + 160, bubbleY, 10, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(gx + 340, (bubbleY + 180) % groundY, 6, 0, Math.PI * 2);
+                    ctx.stroke();
+                } else {
+                    // Bowser's Castle Battlements & Lava Glow
+                    ctx.fillStyle = '#27272a';
+                    ctx.fillRect(gx + 80, groundY - 220, 140, 220);
+                    ctx.fillStyle = '#f97316';
+                    ctx.fillRect(gx + 135, groundY - 170, 30, 45);
+                }
+            }
+
+            // Zone Divider Banners in the World
+            drawZoneSign(100, groundY, "ZONA 1: OVERWORLD", "#16a34a");
+            drawZoneSign(2620, groundY, "ZONA 2: BAWAH TANAH", "#1d4ed8");
+            drawZoneSign(4120, groundY, "ZONA 3: BAWAH AIR", "#0d9488");
+            drawZoneSign(6320, groundY, "ZONA 4: KASTIL BOWSER", "#b91c1c");
+
+            // 3. Ground Bricks per Zone
+            const tileW = 48;
+            for (let tx = 0; tx < WORLD_LENGTH; tx += tileW) {
+                if (tx < 2600) {
+                    ctx.fillStyle = '#b45309'; // Brown Mario brick
+                    ctx.strokeStyle = '#78350f';
+                } else if (tx < 4100) {
+                    ctx.fillStyle = '#1e40af'; // Underground blue brick
+                    ctx.strokeStyle = '#172554';
+                } else if (tx < 6300) {
+                    ctx.fillStyle = '#0f766e'; // Underwater sandy coral floor
+                    ctx.strokeStyle = '#134e4a';
+                } else {
+                    ctx.fillStyle = '#52525b'; // Castle stone bridge
+                    ctx.strokeStyle = '#18181b';
+                }
+                ctx.fillRect(tx, groundY, tileW, GROUND_OFFSET);
+                ctx.lineWidth = 2;
+                ctx.strokeRect(tx, groundY, tileW, 34);
+                ctx.strokeRect(tx, groundY + 34, tileW, GROUND_OFFSET - 34);
+
+                // Top grass/moss/lava rim
+                if (tx < 2600) {
+                    ctx.fillStyle = '#22c55e';
+                    ctx.fillRect(tx, groundY, tileW, 8);
+                } else if (tx >= 6300) {
+                    // Molten lava at bottom of castle ground
+                    ctx.fillStyle = '#ef4444';
+                    ctx.fillRect(tx, groundY + 38, tileW, GROUND_OFFSET - 38);
+                    ctx.fillStyle = '#facc15';
+                    ctx.fillRect(tx, groundY + 46, tileW, 12);
+                }
+            }
+
+            // 4. Green Pipes
+            for (const p of pipes) {
+                const py = groundY - p.h;
+                const pipeGrad = ctx.createLinearGradient(p.x, py, p.x + p.w, py);
+                pipeGrad.addColorStop(0, '#15803d');
+                pipeGrad.addColorStop(0.35, '#4ade80');
+                pipeGrad.addColorStop(1, '#14532d');
+
+                ctx.fillStyle = pipeGrad;
+                ctx.fillRect(p.x + 4, py + 22, p.w - 8, p.h - 22);
+                ctx.strokeStyle = '#052e16';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(p.x + 4, py + 22, p.w - 8, p.h - 22);
+
+                // Pipe Lip
+                ctx.fillRect(p.x, py, p.w, 24);
+                ctx.strokeRect(p.x, py, p.w, 24);
+            }
+
+            // 5. Brick Blocks
+            for (const b of brickBlocks) {
+                const by = groundY - b.yOffset;
+                ctx.fillStyle = '#c2410c';
+                ctx.fillRect(b.x, by, b.w, b.h);
+                ctx.strokeStyle = '#431407';
+                ctx.lineWidth = 2.5;
+                ctx.strokeRect(b.x, by, b.w, b.h);
+                // Brick mortar lines
+                ctx.beginPath();
+                ctx.moveTo(b.x, by + b.h / 2);
+                ctx.lineTo(b.x + b.w, by + b.h / 2);
+                ctx.moveTo(b.x + b.w / 2, by);
+                ctx.lineTo(b.x + b.w / 2, by + b.h / 2);
+                ctx.stroke();
+            }
+
+            // 6. 10 Question Boxes [?]
+            const pulse = Math.sin(Date.now() * 0.008) * 3;
+            for (const qb of questionBlocks) {
+                const qy = groundY - qb.yOffset - qb.bounceY;
+                if (!qb.answered) {
+                    // Glowing Golden Question Block
+                    ctx.fillStyle = '#facc15';
+                    ctx.fillRect(qb.x, qy, qb.w, qb.h);
+                    ctx.strokeStyle = '#713f12';
+                    ctx.lineWidth = 3.5;
+                    ctx.strokeRect(qb.x, qy, qb.w, qb.h);
+
+                    // Corner rivets
+                    ctx.fillStyle = '#a16207';
+                    ctx.fillRect(qb.x + 4, qy + 4, 4, 4);
+                    ctx.fillRect(qb.x + qb.w - 8, qy + 4, 4, 4);
+                    ctx.fillRect(qb.x + 4, qy + qb.h - 8, 4, 4);
+                    ctx.fillRect(qb.x + qb.w - 8, qy + qb.h - 8, 4, 4);
+
+                    // '?' Symbol
+                    ctx.fillStyle = '#713f12';
+                    ctx.font = 'bold 24px "Press Start 2P"';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('?', qb.x + qb.w / 2 + 2, qy + 38);
+
+                    // Floating Label "SOAL #N" above box
+                    ctx.fillStyle = '#dc2626';
+                    ctx.beginPath();
+                    ctx.roundRect(qb.x - 10, qy - 30 + pulse, qb.w + 20, 22, 6);
+                    ctx.fill();
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 11px Fredoka';
+                    ctx.fillText(`SOAL ${qb.number}`, qb.x + qb.w / 2, qy - 15 + pulse);
+                } else {
+                    // Answered Block (Steel / Checkmark)
+                    const log = gameState.answersLog[qb.index];
+                    ctx.fillStyle = (log && log.isCorrect) ? '#10b981' : '#64748b';
+                    ctx.fillRect(qb.x, qy, qb.w, qb.h);
+                    ctx.strokeStyle = '#1e293b';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(qb.x, qy, qb.w, qb.h);
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 22px Fredoka';
+                    ctx.textAlign = 'center';
+                    ctx.fillText((log && log.isCorrect) ? '✓' : '✗', qb.x + qb.w / 2, qy + 35);
+                }
+            }
+
+            // 7. Decorative Coins
+            for (const c of decorCoins) {
+                if (c.collected) continue;
+                const cy = groundY - c.yOffset;
+                ctx.fillStyle = '#fde047';
+                ctx.beginPath();
+                ctx.ellipse(c.x, cy, 9, 13, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ca8a04';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
+            // 8. Patrolling Enemies (Goombas)
+            for (const en of enemies) {
+                const ey = groundY - (en.squished ? 16 : en.h);
+                const eh = en.squished ? 16 : en.h;
+                ctx.fillStyle = en.type === 'beetle' ? '#334155' : (en.type === 'crab' ? '#ec4899' : '#9a3412');
+                ctx.beginPath();
+                ctx.roundRect(en.x, ey, en.w, eh, [18, 18, 4, 4]);
+                ctx.fill();
+                ctx.strokeStyle = '#27272a';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                if (!en.squished) {
+                    // Eyes
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(en.x + 8, ey + 10, 6, 10);
+                    ctx.fillRect(en.x + 24, ey + 10, 6, 10);
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(en.x + 10, ey + 13, 3, 6);
+                    ctx.fillRect(en.x + 26, ey + 13, 3, 6);
+                }
+            }
+
+            // 9. Finish Flagpole & Castle
+            drawFlagpoleAndCastle(flagpole.x, groundY);
+
+            // 10. Draw Super Mario Character
+            drawMario(mario.x, mario.y, mario.w, mario.h);
+
+            // 11. Particles & Floating Texts
+            for (const p of gameState.particles) {
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, p.size, p.size);
+            }
+            for (const ft of gameState.floatingTexts) {
+                ctx.font = 'bold 16px Fredoka';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#0f172a';
+                ctx.fillText(ft.text, ft.x + 2, ft.y + 2);
+                ctx.fillStyle = ft.color;
+                ctx.fillText(ft.text, ft.x, ft.y);
+            }
+
+            ctx.restore();
+            ctx.restore();
+        }
+
+        function drawMario(x, y, w, h) {
+            ctx.save();
+            if (mario.invincibleTimer > 0 && Math.floor(mario.invincibleTimer / 4) % 2 === 0) {
+                ctx.globalAlpha = 0.45;
+            }
+            ctx.translate(x + w / 2, y + h / 2);
+            ctx.scale(mario.dir, 1);
+
+            const legSwing = mario.onGround ? Math.sin(mario.animFrame) * 6 : 5;
+
+            // Boots
+            ctx.fillStyle = '#78350f';
+            ctx.fillRect(-14 + legSwing, 18, 13, 9);
+            ctx.fillRect(2 - legSwing, 18, 13, 9);
+
+            // Blue Overalls & Red Shirt
+            ctx.fillStyle = '#dc2626';
+            ctx.fillRect(-15, -4, 30, 18);
+            ctx.fillStyle = '#1d4ed8';
+            ctx.fillRect(-12, 2, 24, 17);
+            // Yellow overall buttons
+            ctx.fillStyle = '#facc15';
+            ctx.fillRect(-6, 6, 4, 4);
+            ctx.fillRect(4, 6, 4, 4);
+
+            // Head / Face
+            ctx.fillStyle = '#fed7aa';
+            ctx.beginPath();
+            ctx.roundRect(-13, -22, 26, 20, 6);
+            ctx.fill();
+
+            // Eye & Iconic Mustache
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(4, -17, 4, 6);
+            ctx.fillStyle = '#451a03';
+            ctx.fillRect(1, -9, 14, 4);
+
+            // Nose
+            ctx.fillStyle = '#fdba74';
+            ctx.beginPath();
+            ctx.arc(13, -12, 4.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Red Mario Cap with 'M' emblem
+            ctx.fillStyle = '#dc2626';
+            ctx.beginPath();
+            ctx.roundRect(-16, -28, 30, 9, [8, 8, 0, 0]);
+            ctx.fill();
+            ctx.fillRect(-16, -22, 36, 5); // Cap visor
+
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(2, -23, 4.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawCloud(x, y, scale) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.scale(scale, scale);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.beginPath();
+            ctx.arc(0, 0, 24, 0, Math.PI * 2);
+            ctx.arc(22, -8, 28, 0, Math.PI * 2);
+            ctx.arc(48, 0, 22, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function drawHill(x, groundY, w, h, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(x, groundY);
+            ctx.quadraticCurveTo(x + w / 2, groundY - h * 1.6, x + w, groundY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = '#14532d';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        function drawCoral(x, groundY, color) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 8;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(x, groundY);
+            ctx.lineTo(x, groundY - 55);
+            ctx.moveTo(x, groundY - 30);
+            ctx.lineTo(x - 20, groundY - 50);
+            ctx.moveTo(x, groundY - 22);
+            ctx.lineTo(x + 20, groundY - 45);
+            ctx.stroke();
+        }
+
+        function drawZoneSign(x, groundY, label, color) {
+            ctx.fillStyle = '#78350f';
+            ctx.fillRect(x + 45, groundY - 65, 10, 65);
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.roundRect(x - 30, groundY - 95, 160, 34, 8);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 11px Fredoka';
+            ctx.textAlign = 'center';
+            ctx.fillText(label, x + 50, groundY - 74);
+        }
+
+        function drawFlagpoleAndCastle(fx, groundY) {
+            // Flagpole base
+            ctx.fillStyle = '#d97706';
+            ctx.fillRect(fx - 16, groundY - 32, 32, 32);
+            // Pole
+            ctx.fillStyle = '#fef08a';
+            ctx.fillRect(fx - 4, groundY - 280, 8, 250);
+            // Top Gold Ball
+            ctx.fillStyle = '#facc15';
+            ctx.beginPath();
+            ctx.arc(fx, groundY - 286, 12, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Flag
+            ctx.fillStyle = '#22c55e';
+            ctx.beginPath();
+            ctx.moveTo(fx, groundY - 270);
+            ctx.lineTo(fx - 68, groundY - 245);
+            ctx.lineTo(fx, groundY - 220);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 11px Fredoka';
+            ctx.textAlign = 'center';
+            ctx.fillText('FINISH', fx - 32, groundY - 241);
+
+            // Iconic Brick Castle next to Flagpole
+            const cx = fx + 85;
+            ctx.fillStyle = '#b45309';
+            ctx.fillRect(cx, groundY - 140, 160, 140);
+            ctx.strokeStyle = '#451a03';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(cx, groundY - 140, 160, 140);
+
+            // Upper Castle Tower
+            ctx.fillRect(cx + 30, groundY - 200, 100, 60);
+            ctx.strokeRect(cx + 30, groundY - 200, 100, 60);
+
+            // Castle Door Arch
+            ctx.fillStyle = '#18181b';
+            ctx.beginPath();
+            ctx.arc(cx + 80, groundY - 40, 26, Math.PI, 0);
+            ctx.lineTo(cx + 106, groundY);
+            ctx.lineTo(cx + 54, groundY);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // Main Game Loop
+        function gameLoop() {
+            updatePhysics();
+            drawGame();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = function () {
+            buildWorld();
+            resizeCanvas();
+            gameLoop();
+        };
+    </script>
+</body>
+</html>
